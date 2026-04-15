@@ -2,6 +2,22 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 models/*.h5
-data/raw/
-*.csv
 .env
+
+# Virtual environments
+.venv/
+venv/
+
+# Generated data and reports
+data/processed/
+results/metrics/
+
+# Common model artifacts
+models/*.keras
+models/*.ckpt
+models/*.pt
+models/*.pth
+
+# TensorBoard and logs
+logs/
+runs/
