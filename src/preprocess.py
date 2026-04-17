@@ -66,7 +66,11 @@ def scale_numeric_features(x: pd.DataFrame) -> Tuple[pd.DataFrame, StandardScale
 	scaler = StandardScaler()
 
 	if numeric_cols:
-		x_scaled.loc[:, numeric_cols] = scaler.fit_transform(x_scaled[numeric_cols])
+		scaled_values = scaler.fit_transform(x_scaled[numeric_cols].astype(float))
+		scaled_df = pd.DataFrame(scaled_values, columns=numeric_cols, index=x_scaled.index)
+		non_numeric_df = x_scaled.drop(columns=numeric_cols)
+		x_scaled = pd.concat([scaled_df, non_numeric_df], axis=1)
+		x_scaled = x_scaled[x.columns]
 
 	return x_scaled, scaler
 

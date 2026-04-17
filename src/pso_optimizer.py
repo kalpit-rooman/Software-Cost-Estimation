@@ -10,8 +10,8 @@ def tune_cnn_with_pso(
 	dimensions: int,
 	lower_bounds: np.ndarray,
 	upper_bounds: np.ndarray,
-	n_particles: int = 10,
-	iters: int = 20,
+	n_particles: int = 15,
+	iters: int = 25,
 	options: Dict[str, float] | None = None,
 ) -> Tuple[float, np.ndarray]:
 	"""Run global-best PSO and return best score and best hyperparameter vector."""
@@ -35,15 +35,27 @@ def tune_cnn_with_pso(
 
 
 def decode_cnn_hyperparameters(position: np.ndarray) -> Dict[str, float | int]:
-	"""Map a PSO position vector to typed CNN hyperparameters."""
+	"""Map a PSO position vector to typed CNN hyperparameters.
+
+	Supports both 4D (legacy) and 6D (expanded) position vectors.
+	- 4D: [filters, kernel_size, dense_units, learning_rate]
+	- 6D: [filters, kernel_size, dense_units, learning_rate, dropout_rate, num_conv_layers]
+	"""
 	filters = int(np.clip(round(position[0]), 8, 128))
 	kernel_size = int(np.clip(round(position[1]), 2, 7))
 	dense_units = int(np.clip(round(position[2]), 8, 256))
 	learning_rate = float(np.clip(position[3], 1e-4, 1e-2))
 
-	return {
+	params: Dict[str, float | int] = {
 		"filters": filters,
 		"kernel_size": kernel_size,
 		"dense_units": dense_units,
 		"learning_rate": learning_rate,
 	}
+
+	# Extended 6D search space
+	if len(position) >= 6:
+		params["dropout_rate"] = float(np.clip(position[4], 0.1, 0.5))
+		params["num_conv_layers"] = int(np.clip(round(position[5]), 1, 3))
+
+	return params
