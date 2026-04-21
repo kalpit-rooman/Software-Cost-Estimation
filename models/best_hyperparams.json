@@ -1,8 +1,26 @@
 {
-  "filters": 127,
-  "kernel_size": 5,
-  "dense_units": 149,
-  "learning_rate": 0.005068237718309163,
-  "dropout_rate": 0.3854922437060443,
-  "num_conv_layers": 2
+  "china": {
+    "filters": 50,
+    "kernel_size": 4,
+    "dense_units": 63,
+    "learning_rate": 0.008510214741517726,
+    "dropout_rate": 0.2211651774775311,
+    "num_conv_layers": 2
+  },
+  "desharnais": {
+    "filters": 108,
+    "kernel_size": 2,
+    "dense_units": 141,
+    "learning_rate": 0.008723065178233421,
+    "dropout_rate": 0.26930277890484167,
+    "num_conv_layers": 2
+  },
+  "cocomo81": {
+    "filters": 75,
+    "kernel_size": 6,
+    "dense_units": 132,
+    "learning_rate": 0.008072672826324971,
+    "dropout_rate": 0.16326527180867714,
+    "num_conv_layers": 2
+  }
 }
