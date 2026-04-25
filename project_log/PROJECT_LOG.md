@@ -149,3 +149,14 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Recorded the implemented architecture, PSO, evaluation, and feature-engineering improvements already present in the repository.
 - Recorded the current model-performance snapshot from the saved metrics artifacts.
 - Documented the main outstanding gap: CNN+PSO improves over the baseline CNN on two datasets, but still does not beat the best classical baseline on any dataset.
+
+### 2026-04-25 - Reproducibility, leakage, and CV pipeline update
+
+- Added global `SEED = 42` initialization to the training-side Python modules and notebook entry cells so random, NumPy, and TensorFlow seeding runs before splits, model builds, and PSO calls.
+- Updated `src/pso_optimizer.py` so PSO now scores particles on validation RMSE only, with a dedicated objective builder that accepts `X_train`, `y_train`, `X_val`, and `y_val`.
+- Narrowed the PSO search bounds to the new stable ranges and moved learning-rate search to log scale, while adding batch-size decoding to the 6D search vector.
+- Added `src/cv_pipeline.py` with 5-fold cross-validation helpers for sklearn baselines, baseline CNN, and one-time-tuned CNN+PSO evaluation.
+- Updated `src/feature_engineering.py` so the target transform is toggleable via `use_log_transform=True`, with inverse transformation applied before metric computation.
+- Updated `notebooks/03_baselines.ipynb`, `notebooks/04_cnn.ipynb`, and `notebooks/05_pso.ipynb` to use the new seeding and log-target flow.
+- Reworked `notebooks/05_pso.ipynb` to use a 60/20/20 train/validation/test split, keep the test split untouched during PSO, reuse fixed PSO hyperparameters for 5-fold CNN CV, and save `results/metrics/full_comparison_final.csv`.
+- Local structural validation passed on the touched Python files and notebook edits, but the full training run and metric regeneration were intentionally left for Google Colab execution.

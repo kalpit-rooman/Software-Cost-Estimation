@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import random
 from typing import Dict, List, Tuple
 
 import numpy as np
+import tensorflow as tf
+
+
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
 
 
 def build_cnn_regressor(
@@ -34,7 +42,6 @@ def build_cnn_regressor(
 		Number of Conv1D + BatchNorm blocks (1-3).
 	"""
 	try:
-		import tensorflow as tf
 		from tensorflow.keras import Sequential
 		from tensorflow.keras.layers import (
 			BatchNormalization,

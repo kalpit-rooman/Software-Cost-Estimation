@@ -6,17 +6,30 @@ import numpy as np
 import pandas as pd
 
 
-def log_transform_target(y: pd.Series | np.ndarray) -> np.ndarray:
-    """Apply log1p transform to effort target to reduce right-skew.
+def log_transform_target(
+    y: pd.Series | np.ndarray,
+    use_log_transform: bool = True,
+) -> np.ndarray:
+    """Prepare the effort target for training.
 
-    Use ``inverse_log_transform`` on predictions before evaluation.
+    When ``use_log_transform`` is enabled, apply ``log1p`` before any model training.
+    The paired ``inverse_log_transform`` must be used before computing final metrics.
     """
-    return np.log1p(np.asarray(y, dtype=np.float64))
+    values = np.asarray(y, dtype=np.float64)
+    if not use_log_transform:
+        return values.copy()
+    return np.log1p(values)
 
 
-def inverse_log_transform(y_pred: np.ndarray) -> np.ndarray:
-    """Reverse log1p transform to get predictions back to original scale."""
-    return np.expm1(np.asarray(y_pred, dtype=np.float64))
+def inverse_log_transform(
+    y_pred: np.ndarray,
+    use_log_transform: bool = True,
+) -> np.ndarray:
+    """Map model predictions back to the original effort scale."""
+    values = np.asarray(y_pred, dtype=np.float64)
+    if not use_log_transform:
+        return values.copy()
+    return np.expm1(values)
 
 
 def remove_low_variance_features(
