@@ -38,3 +38,9 @@ Final year project: software development effort estimation using CNN optimized w
 ## Dependencies
 
 tensorflow, scikit-learn, pyswarms, xgboost, pandas, numpy, scipy, matplotlib, seaborn, streamlit, plotly
+
+## Project Logging
+
+- Load and use the `cnn-pso-project-log` skill for any CNN+PSO project update, including experiments, new metrics, bug fixes, completed tasks, session starts, or explicit logging/documentation requests.
+- Update `project_log/PROJECT_LOG.md` in the same turn whenever new project state is learned.
+- Preserve prior history, append dated entries, and include exact metric values when available.
