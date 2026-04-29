@@ -21,6 +21,8 @@ def build_cnn_regressor(
 	learning_rate: float = 1e-3,
 	dropout_rate: float = 0.2,
 	num_conv_layers: int = 1,
+	batch_size: int = 32,
+	n_samples: int | None = None,
 ):
 	"""Build a 1D CNN with BatchNorm and Dropout for tabular regression.
 
@@ -40,6 +42,10 @@ def build_cnn_regressor(
 		Dropout fraction after Dense layers (0-1).
 	num_conv_layers : int
 		Number of Conv1D + BatchNorm blocks (1-3).
+	batch_size : int
+		Accepted for interface compatibility with PSO/ensemble configs.
+	n_samples : int | None
+		Optional training-split size used to cap architecture on tiny datasets.
 	"""
 	try:
 		from tensorflow.keras import Sequential
@@ -55,6 +61,12 @@ def build_cnn_regressor(
 		from tensorflow.keras.optimizers import Adam
 	except ImportError as exc:
 		raise ImportError("tensorflow is required to build the CNN model") from exc
+
+	if n_samples is not None and n_samples < 100:
+		# Small datasets overfit quickly, so cap the search space before building.
+		num_conv_layers = 1
+		filters = min(filters, 32)
+		kernel_size = min(kernel_size, 3)
 
 	layers: List = [Input(shape=(input_length, 1))]
 
@@ -81,6 +93,30 @@ def build_cnn_regressor(
 	return model
 
 
+def get_default_callbacks() -> List[object]:
+	"""Return the default callback stack used across CNN training paths."""
+	try:
+		from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+	except ImportError as exc:
+		raise ImportError("tensorflow is required for training callbacks") from exc
+
+	return [
+		EarlyStopping(
+			monitor="val_loss",
+			patience=15,
+			restore_best_weights=True,
+			verbose=0,
+		),
+		ReduceLROnPlateau(
+			monitor="val_loss",
+			factor=0.5,
+			patience=7,
+			min_lr=1e-6,
+			verbose=0,
+		),
+	]
+
+
 def reshape_for_cnn(x: np.ndarray) -> np.ndarray:
 	"""Reshape tabular 2D features to (samples, features, channels)."""
 	if x.ndim != 2:
@@ -92,44 +128,27 @@ def train_cnn_model(
 	model,
 	x_train: np.ndarray,
 	y_train: np.ndarray,
-	x_val: np.ndarray,
-	y_val: np.ndarray,
+	x_val: np.ndarray | None = None,
+	y_val: np.ndarray | None = None,
 	epochs: int = 100,
 	batch_size: int = 32,
 	verbose: int = 0,
 	use_callbacks: bool = True,
+	validation_split: float = 0.1,
 ) -> Tuple[object, Dict[str, list]]:
-	"""Train model with EarlyStopping and ReduceLROnPlateau callbacks."""
-	try:
-		from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-	except ImportError as exc:
-		raise ImportError("tensorflow is required for training callbacks") from exc
+	"""Train model with default callbacks and either validation data or validation split."""
+	callbacks = get_default_callbacks() if use_callbacks else []
+	fit_kwargs = {
+		"epochs": epochs,
+		"batch_size": batch_size,
+		"verbose": verbose,
+		"callbacks": callbacks,
+	}
 
-	callbacks = []
-	if use_callbacks:
-		callbacks = [
-			EarlyStopping(
-				monitor="val_loss",
-				patience=10,
-				restore_best_weights=True,
-				verbose=0,
-			),
-			ReduceLROnPlateau(
-				monitor="val_loss",
-				factor=0.5,
-				patience=5,
-				min_lr=1e-6,
-				verbose=0,
-			),
-		]
+	if x_val is not None and y_val is not None:
+		fit_kwargs["validation_data"] = (x_val, y_val)
+	elif validation_split > 0.0:
+		fit_kwargs["validation_split"] = validation_split
 
-	history = model.fit(
-		x_train,
-		y_train,
-		validation_data=(x_val, y_val),
-		epochs=epochs,
-		batch_size=batch_size,
-		verbose=verbose,
-		callbacks=callbacks,
-	)
+	history = model.fit(x_train, y_train, **fit_kwargs)
 	return model, history.history

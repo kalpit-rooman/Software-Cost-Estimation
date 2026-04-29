@@ -22,3 +22,44 @@
  1.63265272e-01 1.91533191e+00]
 2026-04-18 01:00:36,139 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
 2026-04-18 01:00:36,258 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-25 15:51:37,866 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-25 15:51:50,294 - tensorflow - WARNING - 5 out of the last 9 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001C55252B600> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+2026-04-25 15:51:50,360 - tensorflow - WARNING - 6 out of the last 12 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001C55252B600> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+2026-04-25 17:26:24,159 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 6625.37166941403, best pos: [94.23194007  4.79062984 -3.12805782  0.34932912  2.49996976 39.47400917]
+2026-04-25 17:26:37,061 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-25 17:26:37,145 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-25 17:28:58,497 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-25 18:48:56,433 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 3190.8860472489646, best pos: [103.83258908   2.58622827  -3.03253282   0.24538055   1.62350064
+  23.27999453]
+2026-04-25 18:49:29,174 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-25 18:49:29,334 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-25 18:51:27,214 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-25 19:28:17,244 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 5364.5357252456615, best pos: [122.14372592   4.35171789  -3.0540885    0.35975154   1.8525637
+  43.29784838]
+2026-04-25 19:28:35,517 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-25 19:28:35,618 - absl - WARNING - You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-25 23:09:52,146 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-25 23:45:57,814 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 6319.775272267604, best pos: [118.03025098   3.27137681  -3.03194417   0.34758667   2.83746493
+  34.38253488]
+2026-04-25 23:59:00,756 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-26 21:36:32,514 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-26 22:35:15,737 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 6319.775272267604, best pos: [118.03025098   3.27137681  -3.03194417   0.34758667   2.83746493
+  34.38253488]
+2026-04-26 22:43:15,436 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-27 00:19:06,135 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 6319.775272267604, best pos: [118.03025098   3.27137681  -3.03194417   0.34758667   2.83746493
+  34.38253488]
+2026-04-27 00:52:00,173 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-28 18:32:01,510 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-28 20:13:08,576 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 6319.775272267604, best pos: [118.03025098   3.27137681  -3.03194417   0.34758667   2.83746493
+  34.38253488]
+2026-04-28 20:32:30,886 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-28 21:59:41,241 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 7279.33904613307, best pos: [ -3.54882061   0.23974447   1.19448736 106.37395344  36.8263399 ]
+2026-04-28 22:15:19,448 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-28 23:29:48,828 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 511.88675061589447, best pos: [84.82641169  4.50821424 -3.49838333  0.11471244  1.12905618 18.60789994]
+2026-04-29 00:03:08,484 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-29 01:10:29,831 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 509.38646837395765, best pos: [ -3.00050387   0.12150127   1.56936048 107.68457195  36.83318875]
+2026-04-29 01:32:27,951 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-29 02:10:24,274 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 5419.259921324534, best pos: [115.25753054   3.90289031  -3.42509149   0.15282691   1.8647221
+  19.53025334]
+2026-04-29 02:46:34,667 - pyswarms.single.global_best - INFO - Optimize for 25 iters with {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+2026-04-29 08:21:31,259 - pyswarms.single.global_best - INFO - Optimization finished | best cost: 5416.321264410187, best pos: [-3.00210126  0.39574325  2.48135581 91.80546967 20.77530258]

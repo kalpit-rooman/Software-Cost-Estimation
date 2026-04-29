@@ -6,6 +6,7 @@ from typing import Callable, Dict, Tuple
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 
 from src.cnn_model import build_cnn_regressor, reshape_for_cnn, train_cnn_model
 from src.feature_engineering import inverse_log_transform, log_transform_target
@@ -118,12 +119,17 @@ def build_cnn_pso_objective(
 	The provided validation split is reserved for PSO scoring, while the final test split
 	should remain untouched until the very end of evaluation.
 	"""
-	X_train_cnn = reshape_for_cnn(np.asarray(X_train, dtype=np.float32))
-	X_val_cnn = reshape_for_cnn(np.asarray(X_val, dtype=np.float32))
+	X_train_array = np.asarray(X_train, dtype=np.float32)
+	X_val_array = np.asarray(X_val, dtype=np.float32)
+	# Fit on the PSO training split only so validation metrics do not see future statistics.
+	scaler = StandardScaler()
+	X_train_scaled = scaler.fit(X_train_array).transform(X_train_array)
+	X_val_scaled = scaler.transform(X_val_array)
+	X_train_cnn = reshape_for_cnn(np.asarray(X_train_scaled, dtype=np.float32))
+	X_val_cnn = reshape_for_cnn(np.asarray(X_val_scaled, dtype=np.float32))
 	y_train_raw = np.asarray(y_train, dtype=np.float32).ravel()
 	y_val_raw = np.asarray(y_val, dtype=np.float32).ravel()
 	y_train_fit = log_transform_target(y_train_raw, use_log_transform=use_log_transform).astype(np.float32)
-	y_val_fit = log_transform_target(y_val_raw, use_log_transform=use_log_transform).astype(np.float32)
 
 	def objective_fn(particles: np.ndarray) -> np.ndarray:
 		scores = np.full(shape=(len(particles),), fill_value=1e6, dtype=float)
@@ -141,17 +147,18 @@ def build_cnn_pso_objective(
 					learning_rate=float(hyperparameters["learning_rate"]),
 					dropout_rate=float(hyperparameters.get("dropout_rate", 0.2)),
 					num_conv_layers=int(hyperparameters.get("num_conv_layers", 1)),
+					batch_size=int(hyperparameters.get("batch_size", 32)),
+					n_samples=len(X_train_scaled),
 				)
 				model, _ = train_cnn_model(
 					model=model,
 					x_train=X_train_cnn,
 					y_train=y_train_fit,
-					x_val=X_val_cnn,
-					y_val=y_val_fit,
 					epochs=epochs,
 					batch_size=int(hyperparameters.get("batch_size", 32)),
 					verbose=verbose,
 					use_callbacks=True,
+					validation_split=0.1,
 				)
 				val_predictions_fit = model.predict(X_val_cnn, verbose=0).ravel()
 				val_predictions = inverse_log_transform(
@@ -165,3 +172,4 @@ def build_cnn_pso_objective(
 		return scores
 
 	return objective_fn
+

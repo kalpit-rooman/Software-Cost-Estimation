@@ -59,20 +59,24 @@ def split_features_target(df: pd.DataFrame, target_col: str) -> Tuple[pd.DataFra
 	return x, y
 
 
-def scale_numeric_features(x: pd.DataFrame) -> Tuple[pd.DataFrame, StandardScaler]:
-	"""Scale numeric columns while preserving non-numeric columns unchanged."""
-	x_scaled = x.copy()
-	numeric_cols = x_scaled.select_dtypes(include=["number"]).columns.tolist()
+def scale_numeric_features(
+	df: pd.DataFrame,
+) -> Tuple[pd.DataFrame, Optional[StandardScaler]]:
+	"""Scale numeric columns for notebook-style preprocessing workflows."""
+	numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+	if not numeric_cols:
+		return df.copy(), None
+
 	scaler = StandardScaler()
-
-	if numeric_cols:
-		scaled_values = scaler.fit_transform(x_scaled[numeric_cols].astype(float))
-		scaled_df = pd.DataFrame(scaled_values, columns=numeric_cols, index=x_scaled.index)
-		non_numeric_df = x_scaled.drop(columns=numeric_cols)
-		x_scaled = pd.concat([scaled_df, non_numeric_df], axis=1)
-		x_scaled = x_scaled[x.columns]
-
-	return x_scaled, scaler
+	scaled_df = df.copy()
+	scaled_values = pd.DataFrame(
+		scaler.fit_transform(df[numeric_cols]),
+		columns=numeric_cols,
+		index=df.index,
+	)
+	for column in numeric_cols:
+		scaled_df[column] = scaled_values[column].astype(float)
+	return scaled_df, scaler
 
 
 def preprocess_dataset(
@@ -88,8 +92,8 @@ def preprocess_dataset(
 		raise ValueError(f"Target column '{target}' was lost during encoding")
 
 	x, y = split_features_target(encoded, target)
-	x_scaled, _ = scale_numeric_features(x)
-	return x_scaled, y, target
+	# Do not fit a scaler here: fitting on the full dataset leaks fold statistics into CV.
+	return x, y, target
 
 
 def save_processed_dataset(df: pd.DataFrame, file_name: str, output_dir: Path = PROCESSED_DATA_DIR) -> Path:

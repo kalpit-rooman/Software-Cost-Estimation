@@ -1,26 +1,68 @@
 {
   "china": {
-    "filters": 50,
-    "kernel_size": 4,
-    "dense_units": 63,
-    "learning_rate": 0.008510214741517726,
-    "dropout_rate": 0.2211651774775311,
-    "num_conv_layers": 2
-  },
-  "desharnais": {
-    "filters": 108,
-    "kernel_size": 2,
-    "dense_units": 141,
-    "learning_rate": 0.008723065178233421,
-    "dropout_rate": 0.26930277890484167,
-    "num_conv_layers": 2
+    "cnn_pso": {
+      "filters": 67,
+      "kernel_size": 4,
+      "dense_units": 64,
+      "learning_rate": 0.00015837031559118745,
+      "dropout_rate": 0.2542703315240835,
+      "num_conv_layers": 2,
+      "batch_size": 16,
+      "learning_rate_exp": -3.8003262178416404,
+      "best_cost": 8155.125338743644
+    },
+    "mlp_pso": {
+      "learning_rate": 0.0006097839109531515,
+      "learning_rate_exp": -3.214824038606986,
+      "dropout_rate": 0.15990213464750794,
+      "n_layers": 2,
+      "units_per_layer": 165,
+      "batch_size": 16,
+      "best_cost": 8147.600824400312
+    }
   },
   "cocomo81": {
-    "filters": 75,
-    "kernel_size": 6,
-    "dense_units": 132,
-    "learning_rate": 0.008072672826324971,
-    "dropout_rate": 0.16326527180867714,
-    "num_conv_layers": 2
+    "cnn_pso": {
+      "filters": 67,
+      "kernel_size": 4,
+      "dense_units": 64,
+      "learning_rate": 0.00015837031559118745,
+      "dropout_rate": 0.2542703315240835,
+      "num_conv_layers": 2,
+      "batch_size": 16,
+      "learning_rate_exp": -3.8003262178416404,
+      "best_cost": 512.5883922503771
+    },
+    "mlp_pso": {
+      "learning_rate": 0.0006097839109531515,
+      "learning_rate_exp": -3.214824038606986,
+      "dropout_rate": 0.15990213464750794,
+      "n_layers": 2,
+      "units_per_layer": 165,
+      "batch_size": 16,
+      "best_cost": 512.6480964521787
+    }
+  },
+  "desharnais": {
+    "cnn_pso": {
+      "filters": 67,
+      "kernel_size": 4,
+      "dense_units": 64,
+      "learning_rate": 0.00015837031559118745,
+      "dropout_rate": 0.2542703315240835,
+      "num_conv_layers": 2,
+      "batch_size": 16,
+      "learning_rate_exp": -3.8003262178416404,
+      "best_cost": 5421.725702415052
+    },
+    "mlp_pso": {
+      "learning_rate": 0.0006097839109531515,
+      "learning_rate_exp": -3.214824038606986,
+      "dropout_rate": 0.15990213464750794,
+      "n_layers": 2,
+      "units_per_layer": 165,
+      "batch_size": 16,
+      "best_cost": 5421.977604478073
+    }
   }
 }

@@ -160,3 +160,52 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Updated `notebooks/03_baselines.ipynb`, `notebooks/04_cnn.ipynb`, and `notebooks/05_pso.ipynb` to use the new seeding and log-target flow.
 - Reworked `notebooks/05_pso.ipynb` to use a 60/20/20 train/validation/test split, keep the test split untouched during PSO, reuse fixed PSO hyperparameters for 5-fold CNN CV, and save `results/metrics/full_comparison_final.csv`.
 - Local structural validation passed on the touched Python files and notebook edits, but the full training run and metric regeneration were intentionally left for Google Colab execution.
+
+### 2026-04-25 - Google Colab notebook root-path fix
+
+- Updated the setup cells in `notebooks/02_preprocessing.ipynb`, `notebooks/03_baselines.ipynb`, `notebooks/04_cnn.ipynb`, and `notebooks/05_pso.ipynb` to detect Google Colab, mount Google Drive, and resolve the repository root from common Drive locations.
+- Added a recursive fallback search for the `Software-cost-Estimation` project folder in Drive so the notebooks no longer depend on `Path.cwd()` matching the repository root.
+- Added a Colab-only `pyswarms` install step in `notebooks/05_pso.ipynb` before importing `src.pso_optimizer`, preventing the PSO notebook from failing on a fresh Colab runtime.
+- Left `notebooks/01_eda.ipynb` unchanged in this pass because its Colab-specific setup had already been handled separately.
+- Validation: reran the updated first code cell in each touched notebook locally; all four executed successfully and resolved `c:\Users\kalpi\OneDrive\Desktop\Software-cost-Estimation` as the project root, with downstream dataset loading succeeding in notebooks 3 to 5.
+
+### 2026-04-25 - CNN+PSO status review from saved artifacts
+
+- Reviewed the latest saved outputs in `results/metrics/cnn_vs_pso_metrics.csv`, `results/metrics/full_comparison_final.csv`, and the result cells in `notebooks/05_pso.ipynb`.
+- Confirmed that the current saved CNN+PSO run improves over the baseline CNN on all three datasets in the leakage-free holdout comparison: China RMSE 4122.80 -> 2240.13, COCOMO-81 RMSE 641.16 -> 612.47, and Desharnais RMSE 5763.83 -> 4911.48.
+- Confirmed that the final 5-fold comparison still favors classical baselines over CNN variants: China best RMSE is RandomForest at 1309.82 vs CNN_PSO at 7667.81, COCOMO-81 best RMSE is XGBoost at 1145.71 vs CNN_PSO at 1413.52, and Desharnais best RMSE is RandomForest at 3052.07 vs CNN_PSO at 5967.26.
+- Observed high CNN variance across folds in `results/metrics/full_comparison_final.csv`, especially for China (CNN_PSO RMSE std 6777.83 and CNN_baseline RMSE std 8795.83), which suggests unstable generalization even though PSO improves the baseline CNN.
+- Identified an evaluation caveat in the current pipeline: `src/preprocess.py` scales full datasets before they are saved, while later cross-validation in `notebooks/05_pso.ipynb` and `src/cv_pipeline.py` reuses those already scaled full-dataset features. That means fold-level scaling statistics are likely leaking into the final CV tables.
+- Recommended next step: move preprocessing inside each CV fold, then rerun the final comparison and only after that invest in another CNN+PSO tuning pass.
+
+### 2026-04-25 - Leakage fix, clean benchmark refactor, MLP expansion, and runtime-budgeted regeneration
+
+- Updated `src/preprocess.py` so `preprocess_dataset()` returns encoded but unscaled features; added an inline leakage comment at the old full-dataset scaling point and restored `scale_numeric_features()` only as a notebook compatibility helper for `notebooks/02_preprocessing.ipynb`.
+- Expanded `src/cv_pipeline.py` into the clean evaluation entry point: it now creates an untouched `X_main` / `X_holdout` split before any scaler fit, performs fold-local `StandardScaler` fits inside every CV split, evaluates holdout metrics exactly once, and writes the 9-model comparison schema (`LinearRegression`, `RandomForest`, `XGBoost`, `CNN_baseline`, `CNN_PSO`, `MLP_baseline`, `MLP_PSO`, `CNN_PSO_ensemble`, `MLP_PSO_ensemble`).
+- Added `src/mlp_model.py`, `src/pso_mlp.py`, and `src/ensemble.py` to support MLP baselines, MLP+PSO tuning, and seeded CNN/MLP ensemble prediction.
+- Updated `src/cnn_model.py` and `src/pso_optimizer.py` so CNN training uses shared `EarlyStopping` + `ReduceLROnPlateau` defaults, accepts fold-size hints for small-dataset architecture caps, and keeps PSO scaling confined to the train split.
+- Added runner support in `scripts/run_clean_benchmark.py` for reduced local budgets (`training_epochs`, `tuning_epochs`, `n_particles`, `iters`, `ensemble_size`, `ensemble_epochs`) so the same clean benchmark path can be executed on a CPU-only Windows session without changing notebook defaults.
+- Structural validation passed on the touched Python files: `src/preprocess.py`, `src/cv_pipeline.py`, `src/cnn_model.py`, `src/pso_optimizer.py`, `src/mlp_model.py`, `src/pso_mlp.py`, `src/ensemble.py`, and `scripts/run_clean_benchmark.py` all reported no editor errors after the refactor.
+- Artifact regeneration is still runtime-bound locally. A reduced clean run with `--training-epochs 5 --tuning-epochs 3 --n-particles 2 --iters 1 --ensemble-size 2 --ensemble-epochs 5` is the current practical path for regenerating the new CSV/model artifacts in this environment.
+
+### 2026-04-25 - Clean benchmark artifacts regenerated successfully
+
+- Completed the reduced-budget clean benchmark run locally with `scripts/run_clean_benchmark.py --training-epochs 5 --tuning-epochs 3 --n-particles 2 --iters 1 --ensemble-size 2 --ensemble-epochs 5` and saved the regenerated outputs under `results/metrics/` and `models/`.
+- Regenerated `results/metrics/holdout_results.csv` and `results/metrics/full_comparison_final.csv` with the full 9-model schema for each dataset, giving 27 data rows per file across China, COCOMO-81, and Desharnais.
+- Regenerated MLP artifacts alongside the existing CNN outputs, including `models/mlp_baseline_china.h5`, `models/mlp_pso_china.h5`, `models/mlp_baseline_cocomo81.h5`, `models/mlp_pso_cocomo81.h5`, `models/mlp_baseline_desharnais.h5`, and `models/mlp_pso_desharnais.h5`.
+- Holdout RMSE snapshot from `results/metrics/holdout_results.csv`: China best model XGBoost at 1467.3214, COCOMO-81 best model LinearRegression at 398.0482, and Desharnais best model LinearRegression at 1997.9377.
+- Final 5-fold RMSE snapshot from `results/metrics/full_comparison_final.csv`: China best model RandomForest at 1285.6427, COCOMO-81 best model RandomForest at 999.3957, and Desharnais best model RandomForest at 3464.0637.
+- The new neural rows are now persisted in the final comparison output for every dataset: `MLP_baseline`, `MLP_PSO`, `CNN_PSO_ensemble`, and `MLP_PSO_ensemble`.
+
+### 2026-04-26 - Notebook runtime fixes and current CNN+PSO status check
+
+- Reviewed the currently saved benchmark artifacts while debugging the notebooks. The persisted `CNN_PSO` holdout RMSE values are 6296.0099 for China, 642.5424 for COCOMO-81, and 5773.1931 for Desharnais from `results/metrics/holdout_results.csv`.
+- Reviewed the persisted 5-fold comparison as well. The saved `CNN_PSO` RMSE mean values are 7707.2841 for China, 1548.4810 for COCOMO-81, and 6788.7100 for Desharnais from `results/metrics/full_comparison_final.csv`, which remain well behind the strongest classical baselines.
+- Observed that `models/best_hyperparams.json` currently stores the same `cnn_pso` configuration for all three datasets, which is consistent with the latest persisted artifacts having been generated from a reduced-budget tuning run rather than a final long-budget experiment.
+- Fixed `src/preprocess.py` so `scale_numeric_features()` now writes scaled numeric columns back with float-safe assignment, removing the pandas `LossySetitemError` / `TypeError` that broke `notebooks/02_preprocessing.ipynb` on newer pandas versions.
+- Updated `notebooks/03_baselines.ipynb` so the main training cell builds baseline estimators via `src.cv_pipeline.get_baseline_model_builders()`, removing the `NameError` path when the old helper-definition cell was skipped.
+- Replaced an accidentally saved markdown block in `notebooks/05_pso.ipynb` with a real code cell that runs `run_full_benchmark(...)`, so the downstream display and save cells no longer depend on undefined `benchmark_results`, `holdout_results`, and `full_comparison_final` variables.
+- Updated the setup cells in `notebooks/02_preprocessing.ipynb`, `notebooks/03_baselines.ipynb`, `notebooks/04_cnn.ipynb`, and `notebooks/05_pso.ipynb` to use dynamic Colab detection through `importlib`, which removes the local unresolved-import noise around `google.colab` in normal VS Code environments.
+- Validation: reran the previously failing preprocessing cell in `notebooks/02_preprocessing.ipynb`, reran the setup and training cells in `notebooks/03_baselines.ipynb`, and reran the setup cells in `notebooks/04_cnn.ipynb` and `notebooks/05_pso.ipynb` successfully.
+- Current diagnostics after the fix pass show no code errors in `src/preprocess.py` or `notebooks/05_pso.ipynb`. The remaining notebook diagnostics are spelling/noise from notebook JSON and saved outputs rather than executable runtime failures.
+- Remaining risk: `notebooks/05_pso.ipynb` was not rerun end-to-end at the full 100/30/15/25 benchmark budget in this local session because that full benchmark would be substantially heavier than the targeted runtime validation performed here.
