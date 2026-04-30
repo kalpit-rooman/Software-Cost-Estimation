@@ -17,7 +17,7 @@ random.seed(SEED)
 np.random.seed(SEED)
 tf.random.set_seed(SEED)
 
-_VALID_BATCH_SIZES = np.array([16, 32, 64], dtype=int)
+_VALID_BATCH_SIZES = np.array([8, 16, 32], dtype=int)
 
 
 def tune_cnn_with_pso(
@@ -25,8 +25,8 @@ def tune_cnn_with_pso(
 	dimensions: int,
 	lower_bounds: np.ndarray,
 	upper_bounds: np.ndarray,
-	n_particles: int = 15,
-	iters: int = 25,
+	n_particles: int = 6,
+	iters: int = 6,
 	options: Dict[str, float] | None = None,
 ) -> Tuple[float, np.ndarray]:
 	"""Run global-best PSO and return best score and best hyperparameter vector."""
@@ -55,8 +55,14 @@ def get_cnn_pso_bounds() -> Tuple[np.ndarray, np.ndarray]:
 	Order: [filters, kernel_size, learning_rate_exp, dropout_rate, num_conv_layers, batch_size]
 	where the actual learning rate is computed as ``10 ** learning_rate_exp``.
 	"""
-	lower_bounds = np.array([16, 2, -4.0, 0.1, 1, 16], dtype=float)
-	upper_bounds = np.array([128, 5, -3.0, 0.4, 3, 64], dtype=float)
+	# Filters: 8 -> 32
+	# Kernel size: keep 2 -> 5
+	# Learning rate searched in log10 space: 0.0005 -> 0.01 -> log10 -> [-3.30103, -2.0]
+	# Dropout: keep 0.1 -> 0.4
+	# Num conv layers: 1 -> 3
+	# Batch size: 8 -> 32
+	lower_bounds = np.array([8, 2, -3.30103, 0.1, 1, 8], dtype=float)
+	upper_bounds = np.array([32, 5, -2.0, 0.4, 3, 32], dtype=float)
 	return lower_bounds, upper_bounds
 
 
@@ -75,7 +81,7 @@ def decode_cnn_hyperparameters(position: np.ndarray) -> Dict[str, float | int]:
 	The learning rate is searched in log space and decoded with ``10 ** learning_rate_exp``.
 	A legacy 4D vector is still accepted for backward compatibility.
 	"""
-	filters = int(np.clip(round(position[0]), 16, 128))
+	filters = int(np.clip(round(position[0]), 8, 32))
 	kernel_size = int(np.clip(round(position[1]), 2, 5))
 
 	params: Dict[str, float | int] = {
@@ -89,7 +95,7 @@ def decode_cnn_hyperparameters(position: np.ndarray) -> Dict[str, float | int]:
 	}
 
 	if len(position) >= 6:
-		learning_rate_exp = float(np.clip(position[2], -4.0, -3.0))
+		learning_rate_exp = float(np.clip(position[2], -3.30103, -2.0))
 		params["learning_rate"] = float(10 ** learning_rate_exp)
 		params["dropout_rate"] = float(np.clip(position[3], 0.1, 0.4))
 		params["num_conv_layers"] = int(np.clip(round(position[4]), 1, 3))
@@ -110,7 +116,7 @@ def build_cnn_pso_objective(
 	X_val: np.ndarray,
 	y_val: np.ndarray,
 	input_length: int,
-	epochs: int = 30,
+	epochs: int = 5,
 	use_log_transform: bool = True,
 	verbose: int = 0,
 ) -> Callable[[np.ndarray], np.ndarray]:
@@ -157,8 +163,8 @@ def build_cnn_pso_objective(
 					epochs=epochs,
 					batch_size=int(hyperparameters.get("batch_size", 32)),
 					verbose=verbose,
-					use_callbacks=True,
-					validation_split=0.1,
+					use_callbacks=False,
+					validation_split=0.0,
 				)
 				val_predictions_fit = model.predict(X_val_cnn, verbose=0).ravel()
 				val_predictions = inverse_log_transform(

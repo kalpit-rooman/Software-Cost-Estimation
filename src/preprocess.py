@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -45,11 +45,15 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
-	"""One-hot encode categorical features."""
+	"""Label-encode categorical features without expanding the feature space."""
 	categorical_cols = df.select_dtypes(exclude=["number"]).columns.tolist()
 	if not categorical_cols:
 		return df.copy()
-	return pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+	encoded_df = df.copy()
+	for column in categorical_cols:
+		encoder = LabelEncoder()
+		encoded_df[column] = encoder.fit_transform(encoded_df[column].astype(str))
+	return encoded_df
 
 
 def split_features_target(df: pd.DataFrame, target_col: str) -> Tuple[pd.DataFrame, pd.Series]:

@@ -1,6 +1,6 @@
 # Project Log
 
-Last updated: 2026-04-25
+Last updated: 2026-04-30
 
 ## Project Summary
 
@@ -133,6 +133,16 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 
 ## Latest Session Note
 
+### 2026-04-30 - Performance review and records log
+
+- Reviewed the saved metric artifacts in `results/metrics/holdout_results.csv`, `results/metrics/full_comparison_final.csv`, and `results/metrics/cnn_vs_pso_metrics.csv`.
+- Holdout snapshot: China best RMSE was `XGBoost` at `1467.3213518914497`; COCOMO81 best RMSE was `LinearRegression` at `395.08054838016204`; Desharnais best RMSE was `LinearRegression` at `1997.9377093894732`.
+- Holdout `CNN_PSO` RMSE was `3463.5213999688585` on China, `624.2937991076277` on COCOMO81, and `22388.06464600845` on Desharnais.
+- Final 5-fold snapshot: China best RMSE was `RandomForest` at `1285.6426800431962`; COCOMO81 best RMSE was `RandomForest` at `1032.5459839901773`; Desharnais best RMSE was `RandomForest` at `3464.0636729167513`.
+- Final 5-fold `CNN_PSO` mean RMSE was `556066.5595478723` on China, `1493.908563780196` on COCOMO81, and `312039.21563477995` on Desharnais.
+- `CNN_PSO_ensemble` improved the holdout RMSE relative to `CNN_PSO` on all three datasets, but the final 5-fold comparison still favors classical baselines.
+- Validation: this log entry was derived directly from the saved CSV artifacts; no model or code artifacts were changed in this step.
+
 ### 2026-04-25 - Metrics review and logging setup
 
 - Recomputed the direct delta between `cnn_baseline` and `cnn_pso` from the saved metric CSVs.
@@ -142,6 +152,63 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Added a dedicated skill to keep this log updated aggressively whenever project progress is reported.
 
 ## Chronological Log
+
+### 2026-04-30 - Performance review and records log
+
+- Reviewed the current saved performance artifacts and recorded the exact values in the project log.
+- Holdout results from `results/metrics/holdout_results.csv` show the best RMSE per dataset as `XGBoost` on China at `1467.3213518914497`, `LinearRegression` on COCOMO81 at `395.08054838016204`, and `LinearRegression` on Desharnais at `1997.9377093894732`.
+- Holdout `CNN_PSO` RMSE remains `3463.5213999688585` for China, `624.2937991076277` for COCOMO81, and `22388.06464600845` for Desharnais.
+- Final 5-fold results from `results/metrics/full_comparison_final.csv` show the best RMSE per dataset as `RandomForest` on China at `1285.6426800431962`, `RandomForest` on COCOMO81 at `1032.5459839901773`, and `RandomForest` on Desharnais at `3464.0636729167513`.
+- Final `CNN_PSO` mean RMSE is `556066.5595478723` on China, `1493.908563780196` on COCOMO81, and `312039.21563477995` on Desharnais.
+- `CNN_PSO_ensemble` gives a lower holdout RMSE than `CNN_PSO` on all three datasets, but the final 5-fold comparison still does not beat the strongest classical baselines.
+
+### 2026-04-29 - CNN notebook rerun after interpretation fix
+
+- Reran the final code cell in `notebooks/04_cnn.ipynb` after updating the prediction wording.
+- Refreshed notebook outputs now report normalized effort values instead of person-months.
+- Exact rerun outputs:
+	- Best validation RMSE from PSO: `0.6392263206214015`
+	- Best hyperparameters: `filters=24`, `kernel_size=4`, `dense_units=64`, `learning_rate=0.009290183207085701`, `dropout_rate=0.3060942398917824`, `num_conv_layers=3`, `batch_size=8`
+	- Final TEST RMSE: `0.6902240729885462`
+	- Final TEST MAE: `0.48763418616435467`
+	- Example prediction output: `Model output = 1.24 -> Predicted normalized effort value for the selected project = 1.24`
+
+### 2026-04-29 - CNN notebook output interpretation corrected
+
+- Updated the final output wording in `notebooks/04_cnn.ipynb` so the reported prediction is described as a normalized effort value instead of person-months.
+- Added an explicit note in the notebook that the model predicts normalized effort values, which can be inverse-transformed to actual effort.
+- No metric values changed in this update; only the interpretation text was corrected.
+
+### 2026-04-29 - CNN notebook final PSO-to-prediction flow executed
+
+- Updated the final PSO cell in `notebooks/04_cnn.ipynb` to run this sequence end-to-end:
+	1. tune on TRAIN and score on VALIDATION (`epochs=5`, `particles=6`, `iterations=6`),
+	2. decode best hyperparameters,
+	3. retrain CNN on `TRAIN + VALIDATION` for `10` epochs,
+	4. evaluate on TEST with RMSE and MAE,
+	5. print human-readable prediction meaning in person-months.
+- Execution completed successfully in the notebook kernel.
+- Exact run outputs from the executed cell:
+	- Best validation RMSE from PSO: `1.2036168972279861`
+	- Best hyperparameters: `filters=8`, `kernel_size=4`, `learning_rate=0.0041553978435462215`, `dropout_rate=0.3187021504122962`, `num_conv_layers=3`, `batch_size=8`
+	- Final TEST RMSE: `1.068876836538165`
+	- Final TEST MAE: `0.7630526601609989`
+	- Example prediction output: `Model output = 0.69 -> Project needs 0.69 person-months`
+
+### 2026-04-29 - PSO objective aligned to 5-epoch train and validation RMSE
+
+- Updated `src/pso_optimizer.py` so `build_cnn_pso_objective(...)` now defaults to `epochs=5`.
+- Updated the PSO objective training call to use TRAIN data only (`validation_split=0.0`) and disabled callbacks in this scoring path (`use_callbacks=False`) to match fixed-epoch objective evaluation.
+- Kept objective scoring on the held-out VALIDATION split using RMSE as the returned score per particle.
+- Validation: executed a smoke-test cell in `notebooks/04_cnn.ipynb` with one sample particle and confirmed output `Validation RMSE: 1.7408480752996467`.
+
+### 2026-04-29 - Raw-data CNN preprocessing update
+
+- Updated `src/preprocess.py` so categorical columns are label-encoded instead of one-hot encoded, keeping the feature matrix compact for the CNN path.
+- Reworked the CNN notebook setup in `notebooks/04_cnn.ipynb` to load the raw datasets through `src.data_loader.load_all_raw_datasets()`, select a dataset key, split features and target, and use a 70/15/15 train/validation/test split.
+- Applied `StandardScaler` only after the split, fitting on the training partition and reusing the scaler for validation and test features.
+- Kept the CNN input reshape step in the notebook as `(samples, features, 1)` before training.
+- Validation: executed the updated notebook setup cell and CNN training cell successfully; the notebook reported train/val/test shapes of `(56, 12, 1)`, `(12, 12, 1)`, and `(13, 12, 1)` for the active Desharnais run, and the training cell completed with best validation MAE `0.7518160939216614`.
 
 ### 2026-04-25 - Project log initialized
 
@@ -209,3 +276,18 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Validation: reran the previously failing preprocessing cell in `notebooks/02_preprocessing.ipynb`, reran the setup and training cells in `notebooks/03_baselines.ipynb`, and reran the setup cells in `notebooks/04_cnn.ipynb` and `notebooks/05_pso.ipynb` successfully.
 - Current diagnostics after the fix pass show no code errors in `src/preprocess.py` or `notebooks/05_pso.ipynb`. The remaining notebook diagnostics are spelling/noise from notebook JSON and saved outputs rather than executable runtime failures.
 - Remaining risk: `notebooks/05_pso.ipynb` was not rerun end-to-end at the full 100/30/15/25 benchmark budget in this local session because that full benchmark would be substantially heavier than the targeted runtime validation performed here.
+
+### 2026-04-29 - Session start: results checkpoint before notebook 05_pso run
+
+- User is about to run `notebooks/05_pso.ipynb` (full PSO tuning and benchmark).
+- Saved artifacts status review:
+  - Reduced-budget benchmark from 2026-04-25 persists in `results/metrics/` and `models/`.
+  - `results/metrics/full_comparison_final.csv` contains 9-model comparison (27 rows): LinearRegression, RandomForest, XGBoost baselines, CNN_baseline, CNN_PSO, MLP_baseline, MLP_PSO, CNN_PSO_ensemble, MLP_PSO_ensemble.
+  - `results/metrics/holdout_results.csv` contains holdout RMSE for all 9 models per dataset.
+  - Holdout RMSE snapshot (reduced budget): China best 1467.32 (XGBoost), COCOMO-81 best 398.05 (LinearRegression), Desharnais best 1997.94 (LinearRegression).
+  - 5-fold RMSE snapshot (reduced budget): China best 1285.64 (RandomForest), COCOMO-81 best 999.40 (RandomForest), Desharnais best 3464.06 (RandomForest).
+  - CNN_PSO holdout RMSE reduced-budget values: China 6296.01, COCOMO-81 642.54, Desharnais 5773.19.
+  - CNN_PSO 5-fold RMSE reduced-budget means: China 7707.28, COCOMO-81 1548.48, Desharnais 6788.71.
+  - Best hyperparams in `models/best_hyperparams.json`: shared config across datasets (filters=8, kernel_size=4, lr=0.00416, dropout=0.319, conv_layers=3, batch_size=8).
+- Key observation: Classical baselines (RandomForest, XGBoost, LinearRegression) remain superior to CNN and CNN+PSO variants in both holdout and 5-fold evaluation under reduced training budgets.
+- Next step: Full-budget run of `notebooks/05_pso.ipynb` with production epochs/particles/iterations to see if increased PSO search intensity and longer neural training close the gap to classical baselines or improve CNN generalization.

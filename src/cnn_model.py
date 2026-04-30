@@ -15,12 +15,12 @@ tf.random.set_seed(SEED)
 
 def build_cnn_regressor(
 	input_length: int,
-	filters: int = 32,
-	kernel_size: int = 3,
-	dense_units: int = 64,
+	filters: int = 16,
+	kernel_size: int = 2,
+	dense_units: int = 16,
 	learning_rate: float = 1e-3,
 	dropout_rate: float = 0.2,
-	num_conv_layers: int = 1,
+	num_conv_layers: int = 2,
 	batch_size: int = 32,
 	n_samples: int | None = None,
 ):
@@ -70,18 +70,16 @@ def build_cnn_regressor(
 
 	layers: List = [Input(shape=(input_length, 1))]
 
-	for i in range(num_conv_layers):
-		layers.append(
-			Conv1D(filters=filters, kernel_size=kernel_size, activation="relu", padding="same")
-		)
-		layers.append(BatchNormalization())
-		# Add MaxPooling between conv layers only if sequence length allows
-		if i < num_conv_layers - 1 and input_length > 2:
-			layers.append(MaxPooling1D(pool_size=2, padding="same"))
+	# Add specified number of Conv1D blocks (default 2)
+	for _ in range(max(1, int(num_conv_layers))):
+		layers.append(Conv1D(filters=filters, kernel_size=kernel_size, activation="relu", padding="same"))
 
-	layers.append(Flatten())
+	# Use GlobalAveragePooling to reduce the temporal dimension
+	from tensorflow.keras.layers import GlobalAveragePooling1D
+	layers.append(GlobalAveragePooling1D())
+
+	# Final dense head as requested
 	layers.append(Dense(dense_units, activation="relu"))
-	layers.append(Dropout(dropout_rate))
 	layers.append(Dense(1))
 
 	model = Sequential(layers)

@@ -1,68 +1,68 @@
 {
   "china": {
     "cnn_pso": {
-      "filters": 67,
+      "filters": 9,
       "kernel_size": 4,
       "dense_units": 64,
-      "learning_rate": 0.00015837031559118745,
-      "dropout_rate": 0.2542703315240835,
-      "num_conv_layers": 2,
-      "batch_size": 16,
-      "learning_rate_exp": -3.8003262178416404,
-      "best_cost": 8155.125338743644
+      "learning_rate": 0.009868276942067582,
+      "dropout_rate": 0.15051306958704383,
+      "num_conv_layers": 3,
+      "batch_size": 8,
+      "learning_rate_exp": -2.0057586710262356,
+      "best_cost": 1085107.468278216
     },
     "mlp_pso": {
-      "learning_rate": 0.0006097839109531515,
-      "learning_rate_exp": -3.214824038606986,
-      "dropout_rate": 0.15990213464750794,
-      "n_layers": 2,
-      "units_per_layer": 165,
-      "batch_size": 16,
-      "best_cost": 8147.600824400312
+      "learning_rate": 0.00039972022092604363,
+      "learning_rate_exp": -3.3982438812258358,
+      "dropout_rate": 0.27772475873557667,
+      "n_layers": 1,
+      "units_per_layer": 215,
+      "batch_size": 32,
+      "best_cost": 8013.485026991197
     }
   },
   "cocomo81": {
     "cnn_pso": {
-      "filters": 67,
-      "kernel_size": 4,
+      "filters": 15,
+      "kernel_size": 2,
       "dense_units": 64,
-      "learning_rate": 0.00015837031559118745,
-      "dropout_rate": 0.2542703315240835,
+      "learning_rate": 0.006666250118812188,
+      "dropout_rate": 0.34990835302498535,
       "num_conv_layers": 2,
-      "batch_size": 16,
-      "learning_rate_exp": -3.8003262178416404,
-      "best_cost": 512.5883922503771
+      "batch_size": 8,
+      "learning_rate_exp": -2.1761183955686616,
+      "best_cost": 323.8855910704666
     },
     "mlp_pso": {
-      "learning_rate": 0.0006097839109531515,
-      "learning_rate_exp": -3.214824038606986,
-      "dropout_rate": 0.15990213464750794,
-      "n_layers": 2,
-      "units_per_layer": 165,
-      "batch_size": 16,
-      "best_cost": 512.6480964521787
+      "learning_rate": 0.000835361075531176,
+      "learning_rate_exp": -3.078125764976883,
+      "dropout_rate": 0.12654775061557585,
+      "n_layers": 1,
+      "units_per_layer": 42,
+      "batch_size": 32,
+      "best_cost": 512.5304277103124
     }
   },
   "desharnais": {
     "cnn_pso": {
-      "filters": 67,
+      "filters": 8,
       "kernel_size": 4,
       "dense_units": 64,
-      "learning_rate": 0.00015837031559118745,
-      "dropout_rate": 0.2542703315240835,
+      "learning_rate": 0.009884171905586867,
+      "dropout_rate": 0.3657714398307388,
       "num_conv_layers": 2,
-      "batch_size": 16,
-      "learning_rate_exp": -3.8003262178416404,
-      "best_cost": 5421.725702415052
+      "batch_size": 8,
+      "learning_rate_exp": -2.0050597099516096,
+      "best_cost": 3992.975605789285
     },
     "mlp_pso": {
-      "learning_rate": 0.0006097839109531515,
-      "learning_rate_exp": -3.214824038606986,
-      "dropout_rate": 0.15990213464750794,
+      "learning_rate": 0.0006067529638861828,
+      "learning_rate_exp": -3.216988093535343,
+      "dropout_rate": 0.1492692448146087,
       "n_layers": 2,
-      "units_per_layer": 165,
-      "batch_size": 16,
-      "best_cost": 5421.977604478073
+      "units_per_layer": 45,
+      "batch_size": 64,
+      "best_cost": 5421.2317492733
     }
   }
 }
