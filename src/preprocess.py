@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder, StandardScaler
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -61,6 +64,54 @@ def split_features_target(df: pd.DataFrame, target_col: str) -> Tuple[pd.DataFra
 	x = df.drop(columns=[target_col])
 	y = df[target_col]
 	return x, y
+
+
+def build_feature_preprocessor(
+	df: pd.DataFrame,
+	target_col: Optional[str] = None,
+	*,
+	scale_numeric: bool = False,
+) -> Tuple[ColumnTransformer, str]:
+	"""Build a train-only tabular preprocessor for leakage-safe model fitting."""
+	target = identify_effort_column(df, preferred=target_col)
+	features, _ = split_features_target(df, target)
+
+	numeric_cols = features.select_dtypes(include=["number"]).columns.tolist()
+	categorical_cols = features.select_dtypes(exclude=["number"]).columns.tolist()
+
+	transformers = []
+	if numeric_cols:
+		numeric_steps: list[tuple[str, object]] = [("imputer", SimpleImputer(strategy="median"))]
+		if scale_numeric:
+			numeric_steps.append(("scaler", StandardScaler()))
+		transformers.append(("numeric", Pipeline(steps=numeric_steps), numeric_cols))
+
+	if categorical_cols:
+		transformers.append(
+			(
+				"categorical",
+				Pipeline(
+					steps=[
+						("imputer", SimpleImputer(strategy="most_frequent")),
+						(
+							"encoder",
+							OrdinalEncoder(
+								handle_unknown="use_encoded_value",
+								unknown_value=-1,
+							),
+						),
+					],
+				),
+				categorical_cols,
+			)
+		)
+
+	preprocessor = ColumnTransformer(
+		transformers=transformers,
+		remainder="drop",
+		verbose_feature_names_out=False,
+	)
+	return preprocessor, target
 
 
 def scale_numeric_features(

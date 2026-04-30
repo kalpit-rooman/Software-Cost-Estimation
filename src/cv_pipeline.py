@@ -8,11 +8,10 @@ from typing import Callable, Dict, Iterable, Sequence, Tuple
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from src.baseline_models import get_baseline_model_builders as build_baseline_model_builders
 from src.cnn_model import build_cnn_regressor, reshape_for_cnn, train_cnn_model
 from src.data_loader import load_all_raw_datasets
 from src.ensemble import DEFAULT_ENSEMBLE_SEEDS, ensemble_predict
@@ -218,31 +217,7 @@ def make_mlp_ensemble_builder_factory(input_length: int) -> Callable[[int], Call
 
 def get_baseline_model_builders() -> Dict[str, Callable[[], object]]:
     """Return fresh sklearn baseline builders for the standardized comparison table."""
-    builders: Dict[str, Callable[[], object]] = {
-        "LinearRegression": lambda: LinearRegression(),
-        "RandomForest": lambda: RandomForestRegressor(
-            n_estimators=300,
-            random_state=SEED,
-            n_jobs=-1,
-        ),
-    }
-    try:
-        from xgboost import XGBRegressor
-    except ImportError:
-        return builders
-
-    builders["XGBoost"] = lambda: XGBRegressor(
-        n_estimators=300,
-        learning_rate=0.05,
-        max_depth=6,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        objective="reg:squarederror",
-        random_state=SEED,
-        n_jobs=-1,
-        verbosity=0,
-    )
-    return builders
+    return build_baseline_model_builders()
 
 
 def prepare_dataset_for_benchmark(

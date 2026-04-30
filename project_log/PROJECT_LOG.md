@@ -291,3 +291,28 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
   - Best hyperparams in `models/best_hyperparams.json`: shared config across datasets (filters=8, kernel_size=4, lr=0.00416, dropout=0.319, conv_layers=3, batch_size=8).
 - Key observation: Classical baselines (RandomForest, XGBoost, LinearRegression) remain superior to CNN and CNN+PSO variants in both holdout and 5-fold evaluation under reduced training budgets.
 - Next step: Full-budget run of `notebooks/05_pso.ipynb` with production epochs/particles/iterations to see if increased PSO search intensity and longer neural training close the gap to classical baselines or improve CNN generalization.
+
+### 2026-05-01 - Leakage-safe baseline export script and pickle artifacts
+
+- Added `scripts/save_baselines.py` as an end-to-end baseline export entry point that loads raw datasets, splits train/test, trains or reloads baseline models, evaluates RMSE and MAE, and saves `.pkl` artifacts.
+- Added `src/baseline_models.py` to centralize the shared `LinearRegression`, `RandomForest`, and `XGBoost` builder configuration and file names.
+- Added `build_feature_preprocessor()` to `src/preprocess.py` so tabular preprocessing now fits imputation, categorical encoding, and optional numeric scaling on the training split only.
+- Updated `src/cv_pipeline.py` to reuse the shared baseline builder module instead of keeping a duplicate baseline-model definition.
+- Saved baseline artifacts under dataset-specific subdirectories to preserve the requested file names without collisions across datasets: `models/china/{lr_model.pkl,rf_model.pkl,xgb_model.pkl}`, `models/cocomo81/{lr_model.pkl,rf_model.pkl,xgb_model.pkl}`, and `models/desharnais/{lr_model.pkl,rf_model.pkl,xgb_model.pkl}`.
+- Full export validation ran successfully in the configured virtual environment with exact holdout metrics from `scripts/save_baselines.py`:
+	- China: `LinearRegression` RMSE `1296.143319`, MAE `446.369674`; `RandomForest` RMSE `1604.754387`, MAE `384.539133`; `XGBoost` RMSE `1503.300169`, MAE `388.871586`.
+	- COCOMO-81: `LinearRegression` RMSE `1922.377594`, MAE `1461.029797`; `RandomForest` RMSE `430.002079`, MAE `246.143128`; `XGBoost` RMSE `620.308905`, MAE `297.070859`.
+	- Desharnais: `LinearRegression` RMSE `1943.914123`, MAE `1435.054687`; `RandomForest` RMSE `2294.399361`, MAE `1765.977451`; `XGBoost` RMSE `2245.187760`, MAE `1693.691995`.
+- Reload-path validation also passed: rerunning the script logic with `reuse_existing=True` for China returned `loaded` status for `LinearRegression`, `RandomForest`, and `XGBoost`.
+
+### 2026-05-01 - Phase 2 baseline ensemble module for saved `.pkl` models
+
+- Extended `src/ensemble.py` without breaking the existing neural `ensemble_predict(...)` path used by `src/cv_pipeline.py`.
+- Added a baseline-model ensemble layer that loads the saved sklearn pipelines from dataset-specific model directories and supports both simple averaging and configurable weighted averaging.
+- Added `BaselineEnsemble`, `initialize_ensemble(...)`, `get_loaded_ensemble()`, and `predict_ensemble(input_features)` so FastAPI-style startup can load models once and request handlers can call a cached prediction function.
+- Added `load_baseline_models(...)`, `simple_average_predictions(...)`, `weighted_average_predictions(...)`, `compare_predictions(...)`, and `compare_loaded_predictions(...)` for reusable ensemble operations and debugging.
+- Fixed baseline prediction input handling so raw `np.ndarray` rows are reconstructed into pandas `DataFrame` objects using the saved pipeline feature names before prediction; this avoids the sklearn `ColumnTransformer` failure that occurs when named-column pipelines receive bare NumPy arrays.
+- Made TensorFlow import lazy inside the neural-only `ensemble_predict(...)` function so the baseline `.pkl` ensemble path no longer pulls TensorFlow into API startup or emits TF runtime warnings.
+- Validation: initialized the China baseline ensemble from `models/china` and predicted successfully from a raw NumPy feature row. Simple averaging returned `6886.097622022004`, with individual predictions `LinearRegression=7193.876004086845`, `RandomForest=7510.966666666666`, and `XGBoost=5953.4501953125`.
+- Validation: weighted averaging also passed using weights `{LinearRegression: 0.2, RandomForest: 0.3, XGBoost: 0.5}`, returning `6668.790298473619` for the same China sample row.
+- Final diagnostics: no editor errors remain in `src/ensemble.py` or `src/cv_pipeline.py` after the ensemble-module update.
