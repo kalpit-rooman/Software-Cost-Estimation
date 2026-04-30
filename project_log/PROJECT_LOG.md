@@ -332,3 +332,14 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Validation: a China request with the `AFP` field omitted still produced a prediction successfully, confirming that the stored imputers handle missing columns once the service injects `np.nan` placeholders.
 - Validation: invalid non-dictionary input raised the expected controlled error `InvalidInputError: input_payload must be a dictionary-like object`.
 - Final diagnostics: no editor errors remain in `src/config.py` or `src/predictor.py` after the prediction-service update.
+
+### 2026-05-01 - Standalone predictor validation script
+
+- Added `test_predictor.py` at the repository root as a simple runnable validation script for the production prediction service in `src/predictor.py`.
+- The script initializes the service once with `load_prediction_service()`, builds a valid `cocomo81` sample input from the first row of `data/processed/cocomo81_processed.csv`, and then exercises the public `predict_cost(...)` API.
+- Covered scenarios: valid prediction, missing-field prediction with two fields removed, invalid dataset handling, invalid non-dictionary input handling, simple ensemble prediction, and weighted ensemble prediction with custom weights `{RandomForest: 0.5, XGBoost: 0.3, LinearRegression: 0.2}`.
+- Validation: ran `python test_predictor.py` in the configured virtual environment and all six scenario checks passed without the script crashing.
+- Observed `cocomo81` happy-path output: `rf_prediction=524.5173333333332`, `xgb_prediction=-273.9039001464844`, `lr_prediction=13267.811313421693`, `ensemble_prediction=4506.1415822028475`, `best_model='RandomForest'`.
+- Observed missing-field output after removing `num` and `dev_mode`: `rf_prediction=402.99833333333316`, `xgb_prediction=459.2120666503906`, `lr_prediction=13486.30684585142`, `ensemble_prediction=4782.839081945048`, `best_model='RandomForest'`.
+- Observed weighted-ensemble output with custom weights: `ensemble_prediction=2833.64975930706` while the individual model predictions remained unchanged from the happy-path run.
+- Validation also confirmed the expected controlled errors: `InvalidDatasetError` for `invalid_dataset` and `InvalidInputError` for a non-dictionary payload.
