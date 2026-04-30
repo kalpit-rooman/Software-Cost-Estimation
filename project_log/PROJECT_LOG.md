@@ -316,3 +316,19 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Validation: initialized the China baseline ensemble from `models/china` and predicted successfully from a raw NumPy feature row. Simple averaging returned `6886.097622022004`, with individual predictions `LinearRegression=7193.876004086845`, `RandomForest=7510.966666666666`, and `XGBoost=5953.4501953125`.
 - Validation: weighted averaging also passed using weights `{LinearRegression: 0.2, RandomForest: 0.3, XGBoost: 0.5}`, returning `6668.790298473619` for the same China sample row.
 - Final diagnostics: no editor errors remain in `src/ensemble.py` or `src/cv_pipeline.py` after the ensemble-module update.
+
+### 2026-05-01 - Production prediction service module for saved baseline pipelines
+
+- Added `src/config.py` to centralize dataset model directories, RMSE scores for `RandomForest`, `XGBoost`, and `LinearRegression`, model-output keys, and default inverse-RMSE ensemble weights.
+- Added `src/predictor.py` as the FastAPI-ready prediction service layer for the saved sklearn pipeline artifacts.
+- Implemented lazy dataset-model caching through `PredictionService`, with `load_models()` for explicit startup warmup and `get_prediction_service()` / `load_prediction_service()` singleton helpers for API integration.
+- Implemented request-time conversion from raw input dictionaries to one-row pandas `DataFrame` payloads using the exact `feature_names_in_` schema embedded in the saved pipelines, so preprocessing remains inside the stored sklearn `Pipeline` objects and is never reapplied manually.
+- Implemented individual predictions for `RandomForest`, `XGBoost`, and `LinearRegression`, plus ensemble prediction through both simple averaging and weighted averaging.
+- Implemented automatic best-model selection from precomputed RMSE scores in `src/config.py`, returning the model name with the lowest configured RMSE for the selected dataset.
+- Implemented safe input handling: unknown dataset keys raise a controlled dataset error, non-dictionary input raises `InvalidInputError`, unexpected input fields are ignored, and missing expected fields are inserted as `np.nan` so the fitted imputers inside the saved pipelines can handle them safely.
+- Validation: warmed the full prediction service with `load_prediction_service()`, then predicted successfully for the China dataset from a raw sample dictionary. Returned output format matched the production contract with keys `rf_prediction`, `xgb_prediction`, `lr_prediction`, `ensemble_prediction`, and `best_model`.
+- Validation: China sample output with simple averaging was `{'rf_prediction': 7510.966666666666, 'xgb_prediction': 5953.4501953125, 'lr_prediction': 7193.876004086845, 'ensemble_prediction': 6886.097622022004, 'best_model': 'LinearRegression'}`.
+- Validation: China sample output with weighted averaging also succeeded using default inverse-RMSE weights, returning `ensemble_prediction = 6889.2255625265825`.
+- Validation: a China request with the `AFP` field omitted still produced a prediction successfully, confirming that the stored imputers handle missing columns once the service injects `np.nan` placeholders.
+- Validation: invalid non-dictionary input raised the expected controlled error `InvalidInputError: input_payload must be a dictionary-like object`.
+- Final diagnostics: no editor errors remain in `src/config.py` or `src/predictor.py` after the prediction-service update.
