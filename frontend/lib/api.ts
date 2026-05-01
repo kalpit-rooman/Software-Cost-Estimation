@@ -1,5 +1,88 @@
 export type DatasetCode = "china" | "cocomo81" | "desharnais";
 
+export type ComplexityLevel = "low" | "medium" | "high";
+export type ReliabilityLevel = "low" | "medium" | "high";
+
+export type UniversalProjectBrief = {
+  num_screens: number;
+  num_entities: number;
+  duration_months: number;
+  team_experience_years: number;
+  pm_experience_years: number;
+  complexity: ComplexityLevel;
+  reliability: ReliabilityLevel;
+  team_size: number;
+  project_notes?: string;
+};
+
+export type UniversalPredictRequest = {
+  project_brief: UniversalProjectBrief;
+  target_currency?: string;
+  version?: number;
+};
+
+export type NormalizedUniversalPredictRequest = {
+  project_brief: UniversalProjectBrief & {
+    project_notes?: string | null;
+  };
+  target_currency: string;
+  version: number;
+};
+
+export type IntakeInferenceResponse = {
+  intake_id: string;
+  follow_up_pack_id: string;
+  intake_version: number;
+  next_step: string;
+};
+
+export type FollowUpInputType = "integer" | "number" | "select" | "text" | "boolean";
+
+export type FollowUpQuestionField = {
+  field_key: string;
+  label: string;
+  input_type: FollowUpInputType;
+  required: boolean;
+  help_text?: string | null;
+  placeholder?: string | null;
+  min_value?: number | null;
+  max_value?: number | null;
+  step?: number | null;
+  options?: string[] | null;
+};
+
+export type FollowUpQuestionPack = {
+  pack_id: string;
+  version: number;
+  title: string;
+  description?: string | null;
+  fields: FollowUpQuestionField[];
+};
+
+export type IntakeFollowUpResponse = {
+  intake_id: string;
+  follow_up_pack: FollowUpQuestionPack;
+  next_step: string;
+};
+
+export type FinalAssemblyRequest = {
+  intake_id: string;
+  follow_up_answers: Record<string, string | number | boolean>;
+};
+
+export type MappingDiagnostics = {
+  internal_route: "china" | "cocomo81" | "desharnais";
+  mapping_confidence: number;
+  mapping_rationale: string[];
+  unresolved_fields: string[];
+};
+
+export type FinalAssemblyResponse = {
+  intake_id: string;
+  mapped_features: Record<string, number>;
+  mapping_diagnostics: MappingDiagnostics;
+};
+
 export type PredictCostRequest = {
   dataset: DatasetCode;
   features: Record<string, number | string>;
@@ -65,4 +148,57 @@ export async function predictCost(request: PredictCostRequest): Promise<PredictC
   });
 
   return parseResponse<PredictCostResponse>(response);
+}
+
+export async function normalizeUniversalPayload(
+  request: UniversalPredictRequest,
+): Promise<NormalizedUniversalPredictRequest> {
+  const response = await fetch(`${API_BASE_URL}/predict/universal/normalize`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  return parseResponse<NormalizedUniversalPredictRequest>(response);
+}
+
+export async function inferIntakeRoute(request: UniversalPredictRequest): Promise<IntakeInferenceResponse> {
+  const response = await fetch(`${API_BASE_URL}/predict/intake`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  return parseResponse<IntakeInferenceResponse>(response);
+}
+
+export async function getFollowUpQuestions(intakeId: string): Promise<IntakeFollowUpResponse> {
+  const response = await fetch(`${API_BASE_URL}/predict/followup/${encodeURIComponent(intakeId)}`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  return parseResponse<IntakeFollowUpResponse>(response);
+}
+
+export async function assembleFinalInputs(request: FinalAssemblyRequest): Promise<FinalAssemblyResponse> {
+  const response = await fetch(`${API_BASE_URL}/predict/final/assemble`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  return parseResponse<FinalAssemblyResponse>(response);
 }

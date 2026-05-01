@@ -1,6 +1,6 @@
 # Project Log
 
-Last updated: 2026-05-01
+Last updated: 2026-05-01 (Phase 5 + Phase 6 complete)
 
 ## Project Summary
 
@@ -153,7 +153,32 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Added a dedicated skill to keep this log updated aggressively whenever project progress is reported.
 
 ## Chronological Log
+### 2026-05-01 – Phase 5 (AI Orchestrator) + Phase 6 (Cost/Currency Layer) implemented
 
+**Phase 5 – AI-First Prediction Orchestrator:**
+- Created abstract provider interface: `backend/services/ai_providers/base.py`
+- Created OpenAI-compatible adapter (supports OpenAI, Groq, Mistral, etc. via base URL override): `backend/services/ai_providers/openai_compatible.py`
+- Created Gemini adapter (v1beta REST, no SDK dependency): `backend/services/ai_providers/gemini.py`
+- Created three prompt profiles (conservative, balanced, optimistic): `backend/services/prompts/profiles.py`
+- Created AI response parser with JSON extraction fallback strategies: `backend/services/ai_response_parser.py`
+- Created guardrails with range validation and list clamping: `backend/services/guardrails.py`
+- Created AI orchestrator coordinating provider selection → prompt construction → parse → guardrail: `backend/services/ai_orchestrator.py`
+- Updated `backend/core/config.py` to load `PREDICTION_MODE`, `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `AI_PROFILE`, `DEFAULT_MONTHLY_RATE_INR` from `.env` via python-dotenv.
+- Created `.env.example` with all configurable settings documented.
+
+**Phase 6 – Effort-to-Cost and Currency Layer:**
+- Created `backend/services/cost_converter.py`: `effort_to_inr(effort_months, monthly_rate_inr) → float`
+- Created `backend/services/currency_converter.py`: static rate table (18 currencies), INR as base, `convert_from_inr() → (display_amount, rate)`
+- Added schemas to `backend/schemas/request_response.py`: `EstimatedEffort`, `CostBreakdown`, `FinalPredictionResponse`, `FinalPredictionRequest`
+
+**`POST /predict/final` endpoint added** (Phase 7 consolidation preview):
+- Accepts `intake_id + follow_up_answers + target_currency + profile_id`
+- Routes through mapper → effort prediction (AI mode or model mode) → cost derivation → currency conversion
+- Returns `FinalPredictionResponse` with effort, cost_breakdown, confidence, assumptions, warnings
+- Model mode uses `src/predictor.py` ensemble; AI mode calls the `AIOrchestrator`
+- Mode controlled by `PREDICTION_MODE` env var (default: `model`)
+
+**Validation:** All new files pass Pylance with no errors.
 ### 2026-04-30 - Performance review and records log
 
 - Reviewed the current saved performance artifacts and recorded the exact values in the project log.
@@ -377,3 +402,90 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Validation results: `/health` returned HTTP 200 with `{"status": "ok"}`, `/datasets` returned the three supported datasets, invalid dataset requests returned HTTP 400, invalid-input requests returned HTTP 422, and CORS preflight responded successfully with the expected allow headers.
 - Positive-path validation also succeeded with a real `china` payload built from `data/processed/china_processed.csv`, returning HTTP 200 and the expected prediction fields with `best_model='LinearRegression'`.
 - Remaining integration step: wire the Next.js frontend to the new backend endpoints and decide whether to keep development-open CORS settings or narrow them for deployment.
+
+### 2026-05-01 - Phase 0 contract freeze for universal AI-first estimator
+
+- Added `PHASE0_CONTRACT_FREEZE.md` to lock the public and internal product contract before schema and orchestration rewrites.
+- Documented the frozen public concepts for the estimator flow: universal project brief, prediction mode label, estimated effort, derived INR base cost, display currency, assumptions, warnings, confidence, and schema version.
+- Documented internal-only concepts that must stay out of the public UI and API language: detected route, mapped feature vector, routing confidence/rationale, provider name, prompt profile, model adapter, and guardrail/runtime metadata.
+- Captured the Phase 0 request/response contract draft with stable field names that support both AI mode and model mode behind one public shape.
+- Captured a file-level cleanup plan for outdated wording and dataset/model exposure across backend contract files and frontend UI/copy touchpoints, including `backend/schemas/request_response.py`, `backend/routes/predict.py`, `backend/routes/meta.py`, `frontend/lib/api.ts`, and `frontend/components/DemoSection.tsx`.
+- Validation: contract-freeze artifact created and aligned with the implementation roadmap requirement that users never see dataset names in the public estimation flow.
+- Next step: execute Phase 1 by implementing the universal input schema in backend and frontend types while keeping the frozen naming and response shape.
+
+### 2026-05-01 - Phase 1 universal input schema and normalization layer
+
+- Implemented the Phase 1 universal public input models in `backend/schemas/request_response.py` with strict validation bounds and enums.
+- Added `ComplexityLevel` and `ReliabilityLevel` enums with allowed categorical values `low`, `medium`, and `high`.
+- Added `UniversalProjectBrief` fields and numeric bounds: `num_screens` (1-5000), `num_entities` (1-10000), `duration_months` (>0 to 120), `team_experience_years` (0-50), `pm_experience_years` (0-50), and `team_size` (1-1000).
+- Added request-level Phase 1 model `UniversalPredictionRequest` with schema version support and currency validation/normalization to uppercase 3-letter codes (default `INR`).
+- Added normalization output models and helper `normalize_universal_request(...)` so backend can validate and normalize universal payloads before later routing work.
+- Added a dedicated backend endpoint `POST /predict/universal/normalize` in `backend/routes/predict.py` that returns the normalized universal payload.
+- Updated `frontend/lib/api.ts` with matching shared Phase 1 types (`UniversalProjectBrief`, `UniversalPredictRequest`, `NormalizedUniversalPredictRequest`) using identical field names and categorical sets.
+- Added frontend API helper `normalizeUniversalPayload(...)` to call the new backend normalization endpoint.
+- Backward compatibility preserved for current demo runtime: legacy dataset-based `/predict` request/response types and methods remain unchanged during this phase.
+- Validation: editor diagnostics report no errors in `backend/schemas/request_response.py`, `backend/routes/predict.py`, and `frontend/lib/api.ts` after the Phase 1 changes.
+- Next step: Phase 2 routing and mapping modules to convert universal payloads into internal dataset-specific feature vectors.
+
+### 2026-05-01 - Implementation plan pivot to adaptive two-step intake flow
+
+- Rewrote `IMPLEMENTATION_PLAN.md` to explicitly follow the approved user journey: limited universal intake questions, hidden internal route prediction, adaptive follow-up inputs, and final prediction.
+- Updated plan wording to keep dataset names fully hidden in public UX while preserving internal route and mapping compatibility with China, COCOMO81, and Desharnais feature families.
+- Reorganized roadmap for easier implementation by splitting the adaptive flow into explicit phases: route prediction service, follow-up question pack system, mapper/final assembly, two-step public API consolidation, and adaptive frontend UX.
+- Added clearer execution guidance with completed foundations marked (Phase 0 and Phase 1) and an execution-friendly order for remaining phases.
+- Updated verification checklist to include adaptive-stage requirements (Stage 1 limit, Stage 2 adaptive rendering, hidden dataset identifiers in public responses, final prediction from merged inputs).
+- Validation: rewritten plan now directly matches the requested flow and remains compatible with AI-first delivery plus later model-mode integration.
+
+### 2026-05-01 - Phase 2 route prediction service implementation
+
+- Implemented `backend/services/router.py` with a deterministic `UniversalRouter` that scores all internal route families (`china`, `cocomo81`, `desharnais`) using weighted heuristics over Stage 1 universal fields.
+- Added route confidence scoring, top-signal rationale generation, and neutral follow-up pack mapping (`adaptive_pack_alpha`, `adaptive_pack_beta`, `adaptive_pack_gamma`) so public responses do not expose dataset names.
+- Extended `backend/schemas/request_response.py` with Phase 2 models:
+	- `InternalRoute`
+	- `RouteInferenceMetadata` (internal/admin metadata model)
+	- `IntakeInferenceResponse` (public-safe Stage 1 intake response)
+- Updated `backend/routes/predict.py` with new endpoint `POST /predict/intake`:
+	- Validates and normalizes universal payload.
+	- Infers hidden route and follow-up pack id.
+	- Returns public-safe response with `intake_id`, `follow_up_pack_id`, `intake_version`, and `next_step`.
+	- Caches internal route metadata in memory for future admin diagnostics.
+- Added `backend/services/__init__.py` to register the new services package cleanly.
+- Validation:
+	- Editor diagnostics show no errors in `backend/schemas/request_response.py`, `backend/services/router.py`, and `backend/routes/predict.py`.
+	- Runtime smoke test via FastAPI `TestClient` returned HTTP `200` for `POST /predict/intake` with response shape:
+		- `intake_id` generated UUID
+		- `follow_up_pack_id='adaptive_pack_gamma'`
+		- `intake_version=1`
+		- `next_step='collect_followup_inputs'`
+- Plan tracking updated: `IMPLEMENTATION_PLAN.md` now marks Phase 2 status as completed.
+
+### 2026-05-01 - Phase 3 and 4 implemented together (follow-up packs + mapper assembly)
+
+- Implemented Phase 3 question-pack system in `backend/services/followup_questions.py` with a versioned registry keyed by hidden internal routes and neutral public labels.
+- Added three adaptive follow-up packs:
+	- `adaptive_pack_alpha` (volume/change details)
+	- `adaptive_pack_beta` (implementation constraints and tooling)
+	- `adaptive_pack_gamma` (process/data complexity)
+- Added strict normalization and validation for Stage 2 answers (required fields, numeric bounds, select-option checks) via `normalize_followup_answers(...)`.
+- Extended `backend/schemas/request_response.py` with new Phase 3 and 4 models:
+	- `FollowUpInputType`, `FollowUpQuestionField`, `FollowUpQuestionPack`, `IntakeFollowUpResponse`
+	- `FinalAssemblyRequest`, `MappingDiagnostics`, `FinalAssemblyResponse`
+- Implemented Phase 4 mapper in `backend/services/mapper.py` as `UniversalMapper` with route-specific assembly functions for China, COCOMO81, and Desharnais-compatible internal vectors.
+- Added mapping confidence and rationale diagnostics in the assembled output and included unresolved optional field tracking.
+- Updated `backend/routes/predict.py` with new endpoints:
+	- `GET /predict/followup/{intake_id}` to return dynamic follow-up questions
+	- `POST /predict/final/assemble` to validate Stage 2 answers and assemble final mapped feature vector
+- Added in-memory cache of normalized Stage 1 intake payloads to support Phase 4 final assembly using the same intake context.
+- Added mapper tests in `backend/tests/test_mapper.py` covering key-field presence and diagnostics for all three internal routes.
+- Updated `frontend/lib/api.ts` with shared Phase 3 and 4 types and helper methods:
+	- `inferIntakeRoute(...)`
+	- `getFollowUpQuestions(...)`
+	- `assembleFinalInputs(...)`
+- Validation:
+	- Editor diagnostics report no errors in all touched backend and frontend files.
+	- End-to-end API smoke test passed for intake -> follow-up -> final assembly:
+		- `POST /predict/intake` returned HTTP `200`
+		- `GET /predict/followup/{intake_id}` returned pack `adaptive_pack_gamma`
+		- `POST /predict/final/assemble` returned HTTP `200` with `internal_route='desharnais'` and mapped features including `Adjustment`, `Length`, `ManagerExp`, and `PointsNonAdjust`.
+	- Mapper test run passed: `Ran 3 tests ... OK` and `FAILED 0`.
+- Plan tracking updated: `IMPLEMENTATION_PLAN.md` now marks Phase 3 and Phase 4 status as completed.
