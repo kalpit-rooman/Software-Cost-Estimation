@@ -21,3 +21,8 @@ models/*.pth
 # TensorBoard and logs
 logs/
 runs/
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/.next/
+frontend/out/

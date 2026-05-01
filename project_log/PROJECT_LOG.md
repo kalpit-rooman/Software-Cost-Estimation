@@ -258,6 +258,26 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 
 ### 2026-04-25 - Clean benchmark artifacts regenerated successfully
 
+
+### 2026-05-01 - Next.js frontend added for production prediction demo
+
+- Added a new `frontend/` package as a monorepo-style Next.js App Router application using TypeScript, Tailwind CSS, and modular React components.
+- Implemented a single-page editorial interface with `Navbar`, `Hero`, `Features`, `DemoSection`, and `Footer` components, keeping the primary focus on the live prediction demo.
+- Added `frontend/lib/api.ts` with typed `getDatasets()` and `predictCost()` helpers targeting the FastAPI backend at `http://localhost:8000` by default, with optional override through `NEXT_PUBLIC_API_BASE_URL`.
+- Implemented `components/DemoSection.tsx` as a controlled client component with dataset loading from `/datasets`, input validation, loading and error states, POST integration with `/predict`, ensemble-first result presentation, model-comparison bars, and backend insight rendering.
+- Added a dataset-aware payload translation layer in the demo so the compact UI inputs (`KLOC`, `Complexity`, `Team Experience`, `Reliability`) are converted into valid feature proxies for the China, COCOMO-81, and Desharnais baseline pipelines.
+- Added `PROJECT_SETUP.md` at the repository root with separate backend and frontend startup commands for the monorepo workflow.
+- Updated `.gitignore` to exclude `frontend/node_modules`, `frontend/.next`, and `frontend/out`.
+- Validation: `npm install` completed successfully in `frontend/`, editor diagnostics reported no frontend errors, and `npm run build` completed successfully with a production Next.js build.
+
+### 2026-05-01 - Editorial homepage redesign for the Next.js frontend
+
+- Reworked the landing page presentation in `frontend/app/page.tsx`, `frontend/components/Navbar.tsx`, `frontend/components/Hero.tsx`, `frontend/components/Features.tsx`, and `frontend/components/Footer.tsx` to replace the earlier symmetric product-template look with a more distinctive editorial composition.
+- Updated `frontend/app/globals.css` with a warmer paper palette, custom panel and section-wash utilities, and an archival-style diagram surface so the visual language feels closer to a publication layout than a generic SaaS dashboard.
+- Restyled `frontend/components/DemoSection.tsx` so the live prediction demo remains the functional core of the page while visually matching the new editorial system.
+- Constraint note: no Stitch MCP integration was available in the current tool environment, so the redesign was implemented directly in code as an original Heritage-inspired interpretation rather than by importing an external design system.
+- Validation pending after this visual pass: rerun frontend diagnostics and a production Next.js build.
+
 - Completed the reduced-budget clean benchmark run locally with `scripts/run_clean_benchmark.py --training-epochs 5 --tuning-epochs 3 --n-particles 2 --iters 1 --ensemble-size 2 --ensemble-epochs 5` and saved the regenerated outputs under `results/metrics/` and `models/`.
 - Regenerated `results/metrics/holdout_results.csv` and `results/metrics/full_comparison_final.csv` with the full 9-model schema for each dataset, giving 27 data rows per file across China, COCOMO-81, and Desharnais.
 - Regenerated MLP artifacts alongside the existing CNN outputs, including `models/mlp_baseline_china.h5`, `models/mlp_pso_china.h5`, `models/mlp_baseline_cocomo81.h5`, `models/mlp_pso_cocomo81.h5`, `models/mlp_baseline_desharnais.h5`, and `models/mlp_pso_desharnais.h5`.

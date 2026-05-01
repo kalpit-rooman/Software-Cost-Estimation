@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 247 243 236;
+  --foreground: 41 33 28;
+  --muted: 119 105 93;
+  --line: 208 196 182;
+  --card: 250 246 240;
+  --accent: 123 73 55;
+  --accent-soft: 232 221 212;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  text-rendering: optimizeLegibility;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top left, rgba(183, 161, 139, 0.2), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(123, 73, 55, 0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 18%);
+  pointer-events: none;
+}
+
+::selection {
+  background-color: rgba(38, 70, 61, 0.16);
+}
+
+input[type="range"] {
+  accent-color: rgb(var(--accent));
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+
+  body {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .editorial-kicker {
+    @apply text-[0.72rem] uppercase tracking-[0.26em] text-muted;
+  }
+
+  .paper-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.12)),
+      linear-gradient(135deg, rgba(123, 73, 55, 0.06), transparent 54%);
+  }
+
+  .section-wash {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 24%),
+      radial-gradient(circle at top right, rgba(174, 148, 124, 0.14), transparent 26%);
+  }
+
+  .archival-diagram {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(244, 238, 229, 0.92)),
+      linear-gradient(135deg, rgba(123, 73, 55, 0.08), transparent 52%);
+  }
+
+  .archival-diagram::before {
+    content: "";
+    position: absolute;
+    inset: 12% 18%;
+    border: 1px solid rgba(var(--line), 0.78);
+    border-radius: 999px;
+  }
+
+  .archival-diagram::after {
+    content: "";
+    position: absolute;
+    inset: 10% 10%;
+    background:
+      linear-gradient(90deg, transparent 0%, transparent 18%, rgba(var(--line), 0.55) 18%, rgba(var(--line), 0.55) 18.35%, transparent 18.35%, transparent 100%),
+      linear-gradient(180deg, transparent 0%, transparent 76%, rgba(var(--line), 0.75) 76%, rgba(var(--line), 0.75) 76.4%, transparent 76.4%, transparent 100%);
+    pointer-events: none;
+  }
+}
