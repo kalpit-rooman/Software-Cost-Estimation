@@ -36,6 +36,41 @@ export type IntakeInferenceResponse = {
   next_step: string;
 };
 
+// Phase 7 / Phase 8 public types ─────────────────────────────────────────────
+
+export type PublicIntakeResponse = {
+  intake_id: string;
+  follow_up_pack: FollowUpQuestionPack;
+  intake_version: number;
+  next_step: string;
+};
+
+export type EstimatedEffort = {
+  effort_months: number;
+  confidence: number;
+  assumptions: string[];
+  warnings: string[];
+  prediction_mode: string;
+};
+
+export type CostBreakdown = {
+  effort_months: number;
+  monthly_rate_inr: number;
+  base_cost_inr: number;
+  target_currency: string;
+  display_cost: number;
+  exchange_rate: number;
+};
+
+export type FinalPredictionResponse = {
+  intake_id: string;
+  estimated_effort: EstimatedEffort;
+  cost_breakdown: CostBreakdown;
+  prediction_confidence: number;
+  assumptions: string[];
+  warnings: string[];
+};
+
 export type FollowUpInputType = "integer" | "number" | "select" | "text" | "boolean";
 
 export type FollowUpQuestionField = {
@@ -103,6 +138,8 @@ type DatasetsResponse = {
 
 type ApiErrorPayload = {
   detail?: string;
+  message?: string;
+  error_code?: string;
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -111,9 +148,11 @@ async function parseResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => null)) as T | ApiErrorPayload | null;
 
   if (!response.ok) {
-    const message = payload && typeof (payload as ApiErrorPayload).detail === "string"
-      ? (payload as ApiErrorPayload).detail
-      : `Request failed with status ${response.status}`;
+    const errPayload = payload as ApiErrorPayload | null;
+    const message =
+      errPayload?.message ??
+      errPayload?.detail ??
+      `Request failed with status ${response.status}`;
     throw new Error(message);
   }
 
@@ -201,4 +240,37 @@ export async function assembleFinalInputs(request: FinalAssemblyRequest): Promis
   });
 
   return parseResponse<FinalAssemblyResponse>(response);
+}
+
+// Phase 8 public two-step API ─────────────────────────────────────────────────
+
+export async function submitIntake(
+  brief: UniversalProjectBrief,
+  targetCurrency = "INR",
+): Promise<PublicIntakeResponse> {
+  const response = await fetch(`${API_BASE_URL}/predict/intake`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ project_brief: brief, target_currency: targetCurrency }),
+  });
+  return parseResponse<PublicIntakeResponse>(response);
+}
+
+export async function submitFinal(
+  intakeId: string,
+  followUpAnswers: Record<string, string | number | boolean>,
+  targetCurrency = "INR",
+  profileId?: string,
+): Promise<FinalPredictionResponse> {
+  const response = await fetch(`${API_BASE_URL}/predict/final`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      intake_id: intakeId,
+      follow_up_answers: followUpAnswers,
+      target_currency: targetCurrency,
+      ...(profileId ? { profile_id: profileId } : {}),
+    }),
+  });
+  return parseResponse<FinalPredictionResponse>(response);
 }

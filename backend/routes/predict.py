@@ -10,6 +10,8 @@ from services.router import UniversalRouter
 from services.ai_orchestrator import AIOrchestrator
 from services.cost_converter import effort_to_inr
 from services.currency_converter import convert_from_inr
+from services.model_orchestrator import ModelOrchestrator
+from services.state_manager import get_state
 from schemas.request_response import (
     CostBreakdown,
     EstimatedEffort,
@@ -32,6 +34,8 @@ router = APIRouter()
 universal_router = UniversalRouter()
 universal_mapper = UniversalMapper()
 ai_orchestrator = AIOrchestrator()
+model_orchestrator = ModelOrchestrator()
+model_orchestrator = ModelOrchestrator()
 intake_metadata_cache: dict[str, RouteInferenceMetadata] = {}
 intake_payload_cache: dict[str, NormalizedUniversalPredictionRequest] = {}
 MAX_CACHED_INTAKES = 1000
@@ -191,7 +195,8 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
         "project_notes": brief.project_notes,
     }
 
-    if cfg.PREDICTION_MODE == "ai":
+    runtime_mode = get_state().prediction_mode
+    if runtime_mode == "ai":
         # --- AI mode ---
         try:
             result = ai_orchestrator.estimate_effort(
@@ -209,7 +214,7 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
         prediction_mode = "ai"
 
     else:
-        # --- Model mode (baseline ML, Phase 10 will complete this) ---
+        # --- Model mode (Phase 10) ---
         mapped_features, mapping_diagnostics = universal_mapper.assemble(
             route=metadata.detected_route,
             brief=brief,
@@ -217,25 +222,23 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
             unresolved_fields=unresolved_fields,
         )
         try:
-            ml_result = predict_cost(
-                metadata.detected_route.value,
-                mapped_features,
-                ensemble_method="simple",
-                weights=None,
+            result = model_orchestrator.estimate_effort(
+                route=metadata.detected_route.value,
+                mapped_features=mapped_features,
+                mapping_confidence=float(mapping_diagnostics.mapping_confidence),
+                unresolved_fields=unresolved_fields,
             )
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Model prediction error: {exc}") from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-        effort_months = float(ml_result["ensemble_prediction"])
-        confidence = float(mapping_diagnostics.mapping_confidence)
-        assumptions = ["Effort derived from ensemble of baseline ML models."]
-        warnings = []
-        if unresolved_fields:
-            warnings.append(f"Some fields used default values: {', '.join(unresolved_fields)}")
+        effort_months = result["effort_months"]
+        confidence = result["confidence"]
+        assumptions = result["assumptions"]
+        warnings = result["warnings"]
         prediction_mode = "model"
 
-    # --- Phase 6: Cost derivation ---
-    monthly_rate_inr = cfg.DEFAULT_MONTHLY_RATE_INR
+    # --- Cost derivation (rate from runtime state) ---
+    monthly_rate_inr = get_state().monthly_rate_inr
     base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
     target_currency = payload.target_currency
     try:

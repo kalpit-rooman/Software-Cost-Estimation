@@ -13,6 +13,7 @@ from core.config import PROJECT_ROOT
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from routes.admin import router as admin_router
 from routes.health import router as health_router
 from routes.meta import router as meta_router
 from routes.predict import router as predict_router
@@ -47,6 +48,10 @@ _TAGS_METADATA = [
     {
         "name": "Internal",
         "description": "Internal/admin debugging endpoints (hidden from public docs).",
+    },
+    {
+        "name": "Admin",
+        "description": "Protected runtime configuration endpoints. Require Bearer token (ADMIN_API_KEY).",
     },
 ]
 
@@ -130,3 +135,4 @@ async def unexpected_error_handler(_: Request, exc: Exception) -> JSONResponse:
 app.include_router(predict_router)
 app.include_router(health_router)
 app.include_router(meta_router)
+app.include_router(admin_router)
