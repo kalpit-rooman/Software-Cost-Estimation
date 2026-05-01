@@ -1,6 +1,6 @@
 # Project Log
 
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 
 ## Project Summary
 
@@ -122,6 +122,7 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Processed datasets for all three data sources.
 - Saved CNN and CNN+PSO model artifacts.
 - Metrics CSVs comparing baselines and CNN variants.
+- A FastAPI backend scaffold under `backend/` for prediction, health, and dataset-metadata endpoints.
 
 ### Still pending or incomplete
 
@@ -343,3 +344,16 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Observed missing-field output after removing `num` and `dev_mode`: `rf_prediction=402.99833333333316`, `xgb_prediction=459.2120666503906`, `lr_prediction=13486.30684585142`, `ensemble_prediction=4782.839081945048`, `best_model='RandomForest'`.
 - Observed weighted-ensemble output with custom weights: `ensemble_prediction=2833.64975930706` while the individual model predictions remained unchanged from the happy-path run.
 - Validation also confirmed the expected controlled errors: `InvalidDatasetError` for `invalid_dataset` and `InvalidInputError` for a non-dictionary payload.
+
+### 2026-05-01 - FastAPI backend scaffold for production prediction service
+
+- Added a dedicated backend structure under `backend/` with `main.py`, route modules for `/predict`, `/health`, and `/datasets`, shared Pydantic request/response models, and backend constants in `backend/core/config.py`.
+- Implemented FastAPI startup using a lifespan context manager and warmed the production prediction service once per process through `load_prediction_service()`.
+- Added CORS middleware configured for development with all origins, methods, and headers allowed.
+- Mapped prediction-service errors to API responses: `InvalidDatasetError` returns HTTP 400, `InvalidInputError` returns HTTP 422, and uncaught exceptions return HTTP 500 with JSON error bodies.
+- Implemented the `/predict` response contract expected by the frontend, including `rf_prediction`, `xgb_prediction`, `lr_prediction`, `ensemble_prediction`, `best_model`, and the fixed insight template `Best model for this dataset is {best_model}`.
+- Updated `requirements.txt` to include `fastapi` and `uvicorn[standard]` so the backend can run in the project virtual environment with `uvicorn main:app --reload` from the `backend/` directory.
+- Validation: installed the new backend dependencies in the configured virtual environment, then exercised the app with FastAPI `TestClient` through the real lifespan path.
+- Validation results: `/health` returned HTTP 200 with `{"status": "ok"}`, `/datasets` returned the three supported datasets, invalid dataset requests returned HTTP 400, invalid-input requests returned HTTP 422, and CORS preflight responded successfully with the expected allow headers.
+- Positive-path validation also succeeded with a real `china` payload built from `data/processed/china_processed.csv`, returning HTTP 200 and the expected prediction fields with `best_model='LinearRegression'`.
+- Remaining integration step: wire the Next.js frontend to the new backend endpoints and decide whether to keep development-open CORS settings or narrow them for deployment.
