@@ -1,6 +1,6 @@
 # Project Log
 
-Last updated: 2026-05-01 (Phase 5 + Phase 6 complete)
+Last updated: 2026-05-02 (Phase 7 complete)
 
 ## Project Summary
 
@@ -153,6 +153,26 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Added a dedicated skill to keep this log updated aggressively whenever project progress is reported.
 
 ## Chronological Log
+### 2026-05-02 – Phase 7 (Public API Consolidation) completed + smoke-tested
+
+**Phase 7 – Public API Consolidation:**
+- Added `PublicIntakeResponse` schema: `intake_id`, `follow_up_pack` (inline, no dataset name), `intake_version`, `next_step`.
+- Added `PublicErrorResponse` schema: `error_code`, `message`, `field?` — consistent error envelope.
+- `POST /predict/intake` now returns `PublicIntakeResponse` directly (follow-up pack embedded; frontend needs only 2 calls total).
+- Internal/legacy endpoints hidden from public OpenAPI docs via `include_in_schema=False`:
+  - `GET /predict/followup/{intake_id}` (deprecated)
+  - `POST /predict/final/assemble` (internal)
+  - `POST /predict/universal/normalize` (internal)
+  - `POST /predict` (legacy)
+- `POST /predict/intake` and `POST /predict/final` tagged `"Estimation"` with summaries and `responses=` code docs.
+- `backend/main.py` rewritten with full OpenAPI metadata: `title`, `version`, `description`, tag groups (`Estimation`, `Legacy`, `Internal`).
+- Standardized error shape: `_error_body(error_code, message, field)` helper + exception handlers for `InvalidDatasetError`, `InvalidInputError`, `ValidationError`, generic `Exception`.
+- Resilient lifespan: prediction service model load failure is now a warning, not a crash — adaptive endpoints work without loaded `.pkl` models (model mode still needs them at request time).
+
+**Smoke test (end-to-end with venv Python):**
+- `POST /predict/intake` → `adaptive_pack_beta`, 4 fields, `next_step=submit_followup_answers` ✅
+- `POST /predict/final` → `effort_months=504.83`, `base_cost_inr=75,723,896.94`, `display_cost(USD)=908,686.76`, `mode=model` ✅
+
 ### 2026-05-01 – Phase 5 (AI Orchestrator) + Phase 6 (Cost/Currency Layer) implemented
 
 **Phase 5 – AI-First Prediction Orchestrator:**

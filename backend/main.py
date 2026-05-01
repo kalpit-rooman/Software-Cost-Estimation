@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from core.config import PROJECT_ROOT
 
@@ -17,14 +18,60 @@ from routes.meta import router as meta_router
 from routes.predict import router as predict_router
 from src.predictor import InvalidDatasetError, InvalidInputError, load_prediction_service
 
+# ---------------------------------------------------------------------------
+# OpenAPI metadata
+# ---------------------------------------------------------------------------
+_DESCRIPTION = """
+## Software Cost Estimator API
+
+Two-step adaptive cost estimation.  No dataset names are exposed.
+
+### Public flow
+
+1. **POST /predict/intake** – Submit project brief. Receive adaptive follow-up questions.
+2. **POST /predict/final** – Submit follow-up answers. Receive effort estimate and cost breakdown.
+
+### Authentication
+No authentication is required for the public estimation endpoints.
+"""
+
+_TAGS_METADATA = [
+    {
+        "name": "Estimation",
+        "description": "Public two-step adaptive estimation endpoints.",
+    },
+    {
+        "name": "Legacy",
+        "description": "Deprecated dataset-based endpoint kept for backward compatibility.",
+    },
+    {
+        "name": "Internal",
+        "description": "Internal/admin debugging endpoints (hidden from public docs).",
+    },
+]
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    load_prediction_service()
+    try:
+        load_prediction_service()
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger("uvicorn.error").warning(
+            "Prediction service failed to load at startup: %s. "
+            "The new adaptive endpoints (POST /predict/intake, POST /predict/final) "
+            "will still work. The legacy /predict endpoint requires models.", exc
+        )
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Software Cost Estimator",
+    description=_DESCRIPTION,
+    version="1.0.0",
+    openapi_tags=_TAGS_METADATA,
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,19 +82,49 @@ app.add_middleware(
 )
 
 
+# ---------------------------------------------------------------------------
+# Standardised error helpers
+# ---------------------------------------------------------------------------
+
+def _error_body(error_code: str, message: str, field: str | None = None) -> dict:
+    body: dict = {"error_code": error_code, "message": message}
+    if field is not None:
+        body["field"] = field
+    return body
+
+
 @app.exception_handler(InvalidDatasetError)
 async def invalid_dataset_handler(_: Request, exc: InvalidDatasetError) -> JSONResponse:
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=400,
+        content=_error_body("INVALID_DATASET", str(exc), field="dataset"),
+    )
 
 
 @app.exception_handler(InvalidInputError)
 async def invalid_input_handler(_: Request, exc: InvalidInputError) -> JSONResponse:
-    return JSONResponse(status_code=422, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=422,
+        content=_error_body("INVALID_INPUT", str(exc)),
+    )
+
+
+@app.exception_handler(ValidationError)
+async def pydantic_validation_handler(_: Request, exc: ValidationError) -> JSONResponse:
+    first = exc.errors()[0]
+    field = ".".join(str(loc) for loc in first.get("loc", []))
+    return JSONResponse(
+        status_code=422,
+        content=_error_body("VALIDATION_ERROR", first["msg"], field=field or None),
+    )
 
 
 @app.exception_handler(Exception)
 async def unexpected_error_handler(_: Request, exc: Exception) -> JSONResponse:
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=500,
+        content=_error_body("INTERNAL_ERROR", "An unexpected error occurred."),
+    )
 
 
 app.include_router(predict_router)

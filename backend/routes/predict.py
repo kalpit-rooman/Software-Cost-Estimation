@@ -18,7 +18,7 @@ from schemas.request_response import (
     FinalPredictionRequest,
     FinalPredictionResponse,
     IntakeFollowUpResponse,
-    IntakeInferenceResponse,
+    PublicIntakeResponse,
     RouteInferenceMetadata,
     NormalizedUniversalPredictionRequest,
     PredictionRequest,
@@ -54,20 +54,44 @@ def get_intake_context(intake_id: str) -> tuple[RouteInferenceMetadata, Normaliz
     return metadata, payload
 
 
-@router.post("/predict/intake", response_model=IntakeInferenceResponse)
-def infer_followup_pack(payload: UniversalPredictionRequest) -> IntakeInferenceResponse:
+@router.post(
+    "/predict/intake",
+    response_model=PublicIntakeResponse,
+    tags=["Estimation"],
+    summary="Stage 1 – Submit project brief and receive adaptive follow-up questions",
+)
+def infer_followup_pack(payload: UniversalPredictionRequest) -> PublicIntakeResponse:
+    """
+    Submit universal project brief (Stage 1).
+
+    The backend predicts the best internal estimation route from the brief,
+    then returns the adaptive follow-up question pack for Stage 2.
+    No dataset names or routing details are exposed.
+    """
     normalized = normalize_universal_request(payload)
     intake_id = str(uuid4())
     metadata = universal_router.infer_route(intake_id=intake_id, brief=normalized.project_brief)
     cache_intake_context(metadata, normalized)
-    return IntakeInferenceResponse(
+
+    try:
+        follow_up_pack = get_followup_pack_by_id(metadata.follow_up_pack_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return PublicIntakeResponse(
         intake_id=intake_id,
-        follow_up_pack_id=metadata.follow_up_pack_id,
+        follow_up_pack=follow_up_pack,
         intake_version=normalized.version,
     )
 
 
-@router.get("/predict/followup/{intake_id}", response_model=IntakeFollowUpResponse)
+@router.get(
+    "/predict/followup/{intake_id}",
+    response_model=IntakeFollowUpResponse,
+    tags=["Internal"],
+    summary="[Internal] Retrieve follow-up pack by intake_id (deprecated – use POST /predict/intake)",
+    include_in_schema=False,
+)
 def get_followup_questions(intake_id: str) -> IntakeFollowUpResponse:
     metadata, _ = get_intake_context(intake_id)
     try:
@@ -81,7 +105,13 @@ def get_followup_questions(intake_id: str) -> IntakeFollowUpResponse:
     )
 
 
-@router.post("/predict/final/assemble", response_model=FinalAssemblyResponse)
+@router.post(
+    "/predict/final/assemble",
+    response_model=FinalAssemblyResponse,
+    tags=["Internal"],
+    summary="[Internal] Assemble mapped feature vector (debug/admin only)",
+    include_in_schema=False,
+)
 def assemble_final_inputs(payload: FinalAssemblyRequest) -> FinalAssemblyResponse:
     metadata, normalized_payload = get_intake_context(payload.intake_id)
 
@@ -105,12 +135,29 @@ def assemble_final_inputs(payload: FinalAssemblyRequest) -> FinalAssemblyRespons
     )
 
 
-@router.post("/predict/universal/normalize", response_model=NormalizedUniversalPredictionRequest)
+@router.post(
+    "/predict/universal/normalize",
+    response_model=NormalizedUniversalPredictionRequest,
+    tags=["Internal"],
+    summary="[Internal] Normalize and validate a universal project brief",
+    include_in_schema=False,
+)
 def normalize_universal_payload(payload: UniversalPredictionRequest) -> NormalizedUniversalPredictionRequest:
     return normalize_universal_request(payload)
 
 
-@router.post("/predict/final", response_model=FinalPredictionResponse)
+@router.post(
+    "/predict/final",
+    response_model=FinalPredictionResponse,
+    tags=["Estimation"],
+    summary="Stage 2 – Submit follow-up answers and receive cost estimate",
+    responses={
+        404: {"description": "intake_id not found or expired"},
+        422: {"description": "Invalid follow-up answer values"},
+        500: {"description": "Model prediction error"},
+        502: {"description": "AI provider error"},
+    },
+)
 def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
     """
     Two-step adaptive prediction endpoint (Phase 5 + Phase 6).
@@ -227,7 +274,13 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
     )
 
 
-@router.post("/predict", response_model=PredictionResponse)
+@router.post(
+    "/predict",
+    response_model=PredictionResponse,
+    tags=["Legacy"],
+    summary="[Legacy] Direct dataset-based prediction (deprecated)",
+    include_in_schema=False,
+)
 def predict(payload: PredictionRequest) -> PredictionResponse:
     prediction = predict_cost(
         payload.dataset,
