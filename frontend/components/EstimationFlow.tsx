@@ -249,7 +249,7 @@ export default function EstimationFlow() {
   }
 
   return (
-    <section className="min-h-screen bg-background px-4 py-20 sm:px-6">
+    <section className="min-h-screen bg-background px-4 pb-20 pt-32 sm:px-6">
       <div className="mx-auto max-w-2xl space-y-8">
         <header className="space-y-4 rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Software Cost Estimator</p>

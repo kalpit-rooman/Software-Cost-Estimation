@@ -17,7 +17,7 @@ const teamInfo = [
 export default function ContactPage() {
   return (
     <section className="bg-background">
-      <div className="mx-auto max-w-7xl px-6 pt-32 pb-24 lg:px-10">
+      <div className="mx-auto max-w-7xl px-6 pt-40 pb-24 lg:px-10">
         {/* Header */}
         <div className="mb-14 max-w-2xl">
           <p className="editorial-kicker">Contact</p>

@@ -179,7 +179,7 @@ export default function FeaturesPage() {
     <div className="bg-[#f3efe6] min-h-screen">
 
       {/* ── Hero ──────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-28">
+      <section className="relative overflow-hidden pt-40 pb-20 lg:pt-48 lg:pb-28">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[-15%] right-[-8%] w-[500px] h-[500px] rounded-full bg-primary/[0.05] blur-3xl" />
           <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-teal/[0.06] blur-3xl" />

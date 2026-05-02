@@ -89,7 +89,7 @@ function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
   }
 
   return (
-    <div className="paper-panel max-w-md mx-auto mt-24 p-8 flex flex-col gap-6">
+    <div className="paper-panel max-w-md mx-auto mt-40 p-8 flex flex-col gap-6">
       <div>
         <p className="editorial-kicker mb-1">Admin Access</p>
         <h2 className="text-xl font-semibold text-foreground">Enter admin key</h2>
@@ -162,7 +162,7 @@ function StateEditor({
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-16 flex flex-col gap-8 px-4">
+    <div className="max-w-2xl mx-auto mt-40 flex flex-col gap-8 px-4 pb-20">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

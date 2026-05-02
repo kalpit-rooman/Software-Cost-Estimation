@@ -232,10 +232,11 @@ function ModelComparisonCard({
 
 function RoleBreakdownCard({
   roles,
+  totalCost,
 }: {
   roles: RoleCostBreakdown[];
+  totalCost: number;
 }) {
-  const totalCost = roles.reduce((acc, r) => acc + r.cost_inr, 0);
 
   return (
     <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
@@ -480,6 +481,8 @@ export default function ResultsPage() {
   const [currentTyped, setCurrentTyped] = useState("");
   const [stored, setStored] = useState<StoredEstimation | null>(null);
   const [savedScenarios, setSavedScenarios] = useState<Array<{ name: string; date: string; result: FinalPredictionResponse }>>([]);
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [scenarioName, setScenarioName] = useState("");
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -650,7 +653,7 @@ export default function ResultsPage() {
   const { duration, teamCard, raw } = humanizeEffort(effortMonths);
 
   return (
-    <section className="min-h-screen bg-background px-4 py-16 sm:px-6">
+    <section className="min-h-screen bg-background px-4 pb-16 pt-32 sm:px-6">
       <div className="mx-auto max-w-2xl space-y-5">
         {/* Back link */}
         <button
@@ -680,31 +683,61 @@ export default function ResultsPage() {
             </div>
           </div>
           
-          <div className="flex items-center gap-3 shrink-0 print:hidden">
-            <button
-              type="button"
-              onClick={() => {
-                const name = prompt("Enter a name for this scenario (e.g. 'Native App with Senior Team'):");
-                if (name) {
-                  const newScenario = { name, date: new Date().toISOString(), result };
-                  const updated = [...savedScenarios, newScenario];
-                  setSavedScenarios(updated);
-                  localStorage.setItem("software_cost_scenarios", JSON.stringify(updated));
-                }
-              }}
-              className="flex items-center gap-1.5 rounded-lg border border-line bg-background px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted/10 shadow-sm"
-            >
-              <FloppyDisk size={16} />
-              Save Scenario
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm"
-            >
-              <Printer size={16} />
-              Export PDF
-            </button>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 print:hidden mt-4 sm:mt-0">
+            {showSaveInput ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="e.g. Enterprise Team Setup"
+                  value={scenarioName}
+                  onChange={(e) => setScenarioName(e.target.value)}
+                  className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (scenarioName.trim()) {
+                      const newScenario = { name: scenarioName.trim(), date: new Date().toISOString(), result };
+                      const updated = [...savedScenarios, newScenario];
+                      setSavedScenarios(updated);
+                      localStorage.setItem("software_cost_scenarios", JSON.stringify(updated));
+                      setShowSaveInput(false);
+                      setScenarioName("");
+                    }
+                  }}
+                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-600"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSaveInput(false)}
+                  className="rounded-lg px-2 py-1.5 text-sm font-semibold text-muted hover:bg-muted/10 hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowSaveInput(true)}
+                className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border border-line bg-background px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted/10 shadow-sm"
+              >
+                <FloppyDisk size={16} />
+                Save Scenario
+              </button>
+            )}
+            {!showSaveInput && (
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm"
+              >
+                <Printer size={16} />
+                Export PDF
+              </button>
+            )}
           </div>
         </header>
 
@@ -826,7 +859,7 @@ export default function ResultsPage() {
 
         {/* Role Breakdown Table */}
         {result.role_breakdown && (
-          <RoleBreakdownCard roles={result.role_breakdown} />
+          <RoleBreakdownCard roles={result.role_breakdown} totalCost={costINR} />
         )}
 
         {/* Phase Breakdown Table */}
