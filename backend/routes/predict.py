@@ -37,7 +37,6 @@ universal_router = UniversalRouter()
 universal_mapper = UniversalMapper()
 ai_orchestrator = AIOrchestrator()
 model_orchestrator = ModelOrchestrator()
-model_orchestrator = ModelOrchestrator()
 intake_metadata_cache: dict[str, RouteInferenceMetadata] = {}
 intake_payload_cache: dict[str, NormalizedUniversalPredictionRequest] = {}
 MAX_CACHED_INTAKES = 1000

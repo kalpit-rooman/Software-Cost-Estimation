@@ -13,10 +13,10 @@ import core.config as cfg
 from schemas.request_response import ChatMessage, EstimationContext
 
 # ---------------------------------------------------------------------------
-# Groq connection config
+# Groq connection config  (overridable via env / core.config)
 # ---------------------------------------------------------------------------
-_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-_GROQ_MODEL = "llama-3.3-70b-versatile"
+_GROQ_BASE_URL = cfg.OPENAI_BASE_URL or "https://api.groq.com/openai/v1"
+_GROQ_MODEL = cfg.AI_MODEL or "llama-3.3-70b-versatile"
 _TIMEOUT_S = 30.0
 _MAX_TOKENS = 1024
 
