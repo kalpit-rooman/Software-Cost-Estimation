@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -17,22 +17,26 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
+    // Initial check
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out ${
         scrolled
           ? "bg-primary shadow-md border-b border-transparent"
           : "bg-primary border-b border-transparent"
       }`}
     >
       <nav className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className={`flex items-center justify-between transition-all duration-500 ${scrolled ? "py-2" : "py-5"}`}>
+        <div className={`flex items-center justify-between transition-all duration-300 ease-in-out ${scrolled ? "py-2" : "py-6"}`}>
           {/* Brand */}
           <Link
             href="/"
@@ -41,9 +45,9 @@ export default function Navbar() {
             <img 
               src="/icon.png" 
               alt="SoftEstimate Logo" 
-              className={`object-contain transition-all duration-500 ${scrolled ? "h-6 w-6" : "h-9 w-9"}`} 
+              className={`object-contain transition-all duration-300 ease-in-out ${scrolled ? "h-6 w-6" : "h-10 w-10"}`} 
             />
-            <span className={`font-semibold tracking-[-0.02em] text-[#f3efe6] transition-all duration-500 ${scrolled ? "text-lg" : "text-xl"}`}>
+            <span className={`font-semibold tracking-[-0.02em] text-[#f3efe6] transition-all duration-300 ease-in-out ${scrolled ? "text-lg" : "text-xl"}`}>
               SoftEstimate
             </span>
           </Link>

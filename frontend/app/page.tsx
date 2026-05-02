@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Features from "@/components/Features";
 import RetroComputer from "@/components/RetroComputer";
+import ProblemSolution from "@/components/ProblemSolution";
+import HowItWorks from "@/components/HowItWorks";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -95,6 +97,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Problem & Solution ───────────────────────────────── */}
+      <ProblemSolution />
+
+      {/* ── How It Works ─────────────────────────────────────── */}
+      <HowItWorks />
 
       {/* ── Datasets ─────────────────────────────────────────── */}
       <section className="border-y border-line/40 bg-card">
