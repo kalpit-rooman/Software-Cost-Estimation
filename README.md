@@ -124,3 +124,63 @@ See `requirements.txt` for versions.
 
 - If XGBoost is unavailable, baseline notebook will still run with remaining models.
 - If `china.arff` fails to load, verify `scipy` is installed in the active environment.
+
+---
+
+## Web Application
+
+A production-ready estimator is available in `backend/` and `frontend/`.
+
+### Quick start
+
+```powershell
+# Terminal 1 – backend
+cd backend
+..\venv\Scripts\Activate.ps1
+python main.py
+
+# Terminal 2 – frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000` for the estimation app and `http://localhost:3000/admin` for the admin dashboard.
+
+See [PROJECT_SETUP.md](PROJECT_SETUP.md) for full configuration instructions.
+
+### Two-step adaptive flow
+
+1. **Stage 1** — Fill in a universal project brief (screens, entities, duration, team, complexity, reliability).
+2. **Stage 2** — Answer a short set of follow-up questions selected by the backend based on your project profile.
+3. **Result** — Receive effort estimate (person-months), INR base cost, and your chosen display currency breakdown.
+
+No dataset names are exposed. Routing and model selection are fully internal.
+
+### Admin controls
+
+Navigate to `/admin` and enter your `ADMIN_API_KEY` to manage at runtime:
+
+- Switch between **ML model mode** and **AI provider mode** without redeploying.
+- Change AI provider (OpenAI / Gemini / Groq) and prompt profile.
+- Update the monthly blended rate used for cost derivation.
+- View system diagnostics (model service loaded, active mode).
+
+### Running backend tests
+
+```powershell
+cd backend
+..\venv\Scripts\Activate.ps1
+python -m pytest tests/ -v
+```
+
+### Running frontend smoke test
+
+Keep the backend running, then execute:
+
+```powershell
+cd frontend
+npm run smoke:two-step
+```
+
+This script exercises the public two-step flow (`/predict/intake` then `/predict/final`) and prints the resulting effort, cost, and mode.
