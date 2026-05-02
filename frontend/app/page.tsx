@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Features from "@/components/Features";
 import RetroComputer from "@/components/RetroComputer";
 import ProblemSolution from "@/components/ProblemSolution";
 import HowItWorks from "@/components/HowItWorks";
@@ -10,37 +9,6 @@ export const metadata: Metadata = {
   description:
     "Predict software development effort and cost using ML models trained on COCOMO-81, Desharnais, and China datasets.",
 };
-
-const stats = [
-  { value: "3", label: "ML Models", sub: "RF · XGBoost · LR" },
-  { value: "3", label: "Datasets", sub: "COCOMO · Desharnais · China" },
-  { value: "643", label: "Projects Trained", sub: "Real-world data" },
-  { value: "<5s", label: "Estimation Time", sub: "Instant results" },
-];
-
-const datasets = [
-  {
-    tag: "COCOMO-81",
-    label: "Large, code-heavy systems",
-    hint: "Lines of code, cost drivers, schedule constraints",
-    icon: "🏗️",
-    color: "bg-primary/10 text-primary",
-  },
-  {
-    tag: "Desharnais",
-    label: "Business applications",
-    hint: "Function points, transactions, team experience",
-    icon: "📊",
-    color: "bg-secondary/10 text-secondary",
-  },
-  {
-    tag: "China",
-    label: "Medium enterprise systems",
-    hint: "AFP, transaction volume, integrations",
-    icon: "🏢",
-    color: "bg-teal/20 text-teal",
-  },
-];
 
 export default function HomePage() {
   return (
@@ -84,112 +52,10 @@ export default function HomePage() {
               <RetroComputer />
             </div>
           </div>
-
-          {/* Stats strip */}
-          <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4 animate-fade-in-up delay-300">
-            {stats.map((s) => (
-              <div key={s.label} className="card-elevated rounded-xl px-5 py-5">
-                <p className="font-serif text-3xl tracking-editorial text-primary">{s.value}</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">{s.label}</p>
-                <p className="text-xs text-muted">{s.sub}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* ── Problem & Solution ───────────────────────────────── */}
-      <ProblemSolution />
-
-      {/* ── How It Works ─────────────────────────────────────── */}
-      <HowItWorks />
-
-      {/* ── Datasets ─────────────────────────────────────────── */}
-      <section className="border-y border-line/40 bg-card">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10">
-          <div className="text-center mb-14">
-            <p className="editorial-kicker">Estimation Paths</p>
-            <h2 className="mt-3 font-serif text-4xl tracking-editorial text-foreground sm:text-5xl">
-              One tool, three estimation models
-            </h2>
-            <p className="mt-4 max-w-2xl mx-auto text-base text-muted leading-7">
-              Select your project type and we route your inputs to the right ML pipeline.
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-3">
-            {datasets.map((d) => (
-              <Link
-                key={d.tag}
-                href="/estimate"
-                className="group card-elevated rounded-2xl p-7 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(44,76,59,0.1)] hover:-translate-y-1"
-              >
-                <span className={`inline-flex h-12 w-12 items-center justify-center rounded-xl text-xl ${d.color}`}>
-                  {d.icon}
-                </span>
-                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-                  {d.tag}
-                </p>
-                <h3 className="mt-2 font-serif text-xl tracking-editorial text-foreground group-hover:text-primary transition-colors">
-                  {d.label}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-muted">{d.hint}</p>
-                <div className="mt-5 flex items-center gap-1.5 text-sm font-medium text-primary opacity-0 translate-x-[-4px] transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">
-                  <span>Get estimate</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ──────────────────────────────────────────── */}
-      <Features />
-
-      {/* ── About ─────────────────────────────────────────────── */}
-      <section id="about" className="bg-background">
-        <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-            <div>
-              <p className="editorial-kicker">About the project</p>
-              <h2 className="mt-4 font-serif text-4xl tracking-editorial text-foreground sm:text-5xl">
-                A decision tool, not just a utility screen.
-              </h2>
-              <p className="mt-6 text-lg leading-8 text-muted">
-                SoftEstimate frames machine learning output as something to
-                inspect, compare, and trust deliberately — built for software 
-                cost estimation workflows that need real analytical depth.
-              </p>
-              <div className="mt-8 space-y-4">
-                {[
-                  "Three dataset pipelines with ensemble ML models",
-                  "Adaptive inputs scoped to each estimation method",
-                  "Confidence, assumptions, and warnings surfaced transparently",
-                  "AI-powered chatbot for post-estimation Q&A",
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-3">
-                    <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><polyline points="20 6 9 17 4 12"/></svg>
-                    </span>
-                    <span className="text-sm leading-6 text-foreground">{item}</span>
-                  </div>
-                ))}
-              </div>
-              <Link href="/estimate" className="btn-primary mt-10">
-                Try the Estimator
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: "Frontend", value: "Next.js 15 + Tailwind", icon: "⚡" },
-                { label: "Backend", value: "FastAPI + Python", icon: "🐍" },
-                { label: "ML Stack", value: "RF · XGBoost · LR", icon: "🧠" },
-                { label: "Chatbot", value: "Groq + LLaMA 3.3", icon: "💬" },
-              ].map((item) => (
-                <div key={item.label} className="card-elevated rounded-xl p-5 text-center">
+      {/* ── Problem & Solution ────────────�              <div key={item.label} className="card-elevated rounded-xl p-5 text-center">
                   <span className="text-2xl">{item.icon}</span>
                   <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted">{item.label}</p>
                   <p className="mt-1 text-sm font-medium text-foreground">{item.value}</p>
