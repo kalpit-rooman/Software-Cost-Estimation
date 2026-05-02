@@ -1,105 +1,86 @@
-const supportingFeatures = [
-  {
-    index: "01",
-    title: "Multiple ML Models",
-    description: "Review Random Forest, XGBoost, and Linear Regression outputs side by side before acting on a recommendation.",
-  },
-  {
-    index: "02",
-    title: "Ensemble Prediction",
-    description: "Use the combined estimate as the lead signal while still keeping every underlying model visible for inspection.",
-  },
-  {
-    index: "03",
-    title: "Dataset-Based Estimation",
-    description: "Switch between China, COCOMO-81, and Desharnais contexts without changing the demo flow.",
-  },
-  {
-    index: "04",
-    title: "Real-time Results",
-    description: "Fetch predictions from the live FastAPI service and display the recommendation immediately in the interface.",
-  },
-];
+import Link from "next/link";
 
-const leadPoints = [
-  "Model outputs stay visible instead of being collapsed into a single black-box number.",
-  "The ensemble estimate becomes the headline, but the supporting evidence remains on the page.",
-  "Dataset selection changes the inference lens without forcing a different interaction pattern.",
-];
-
-const footerNotes = [
+const features = [
   {
-    label: "Live API",
-    value: "GET /datasets · POST /predict",
+    num: "01",
+    title: "User-driven dataset selection",
+    description:
+      "Choose between large code-heavy systems (COCOMO), business apps (Desharnais), or medium enterprise (China). No internal routing jargon.",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+    ),
   },
   {
-    label: "Type-safe client",
-    value: "Typed request and response helpers in the frontend service layer",
+    num: "02",
+    title: "Adaptive input forms",
+    description:
+      "Each project type collects only the fields that matter — KLOC for COCOMO, function points for Desharnais, AFP for China. Short and focused.",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+    ),
   },
   {
-    label: "Responsive layout",
-    value: "Editorial composition scales down without losing navigation or demo access",
+    num: "03",
+    title: "Calibrated ensemble output",
+    description:
+      "Three models (Random Forest, XGBoost, Linear Regression) ensembled per dataset. You get effort in person-months plus a full cost breakdown.",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    ),
+  },
+  {
+    num: "04",
+    title: "AI-powered Q&A assistant",
+    description:
+      "After estimation, ask our Groq-powered chatbot anything — why effort is high, how to reduce cost, or what the assumptions mean.",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg>
+    ),
   },
 ];
 
 export default function Features() {
   return (
-    <section id="features" className="border-b border-line/80 bg-card/30">
-      <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
-            <p className="editorial-kicker">Features</p>
-            <h2 className="mt-4 font-serif text-4xl tracking-editorial text-foreground sm:text-5xl">
-              Designed for fast comparison and clear decisions.
-            </h2>
-          </div>
-          <p className="max-w-xl text-base leading-8 text-muted sm:text-lg">
-            The experience stays spare and legible, with enough detail to compare model behavior without overwhelming the user.
+    <section id="features" className="bg-background">
+      <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
+        <div className="text-center mb-16">
+          <p className="editorial-kicker">Features</p>
+          <h2 className="mt-3 font-serif text-4xl tracking-editorial text-foreground sm:text-5xl">
+            Designed for clarity and precision
+          </h2>
+          <p className="mt-4 max-w-2xl mx-auto text-base leading-7 text-muted">
+            Every feature is built to give you accurate, understandable estimates 
+            without overwhelming detail.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-px border border-line bg-line lg:grid-cols-[1.14fr_0.86fr]">
-          <article className="paper-panel bg-background px-6 py-8 sm:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="editorial-kicker">Lead capability</p>
-              <p className="text-xs uppercase tracking-[0.24em] text-muted">01</p>
-            </div>
-
-            <h3 className="mt-5 max-w-3xl font-serif text-4xl tracking-editorial text-foreground sm:text-5xl">
-              The homepage reads like a brief, then hands off to a working estimator.
-            </h3>
-
-            <p className="mt-6 max-w-3xl text-base leading-8 text-muted sm:text-lg">
-              The redesign shifts the page away from a symmetrical product template and toward a clearer editorial sequence: context first, system signals second, live demo third.
-            </p>
-
-            <div className="mt-8 grid gap-px border border-line bg-line sm:grid-cols-3">
-              {leadPoints.map((point) => (
-                <div key={point} className="bg-card px-5 py-5 text-sm leading-7 text-muted">
-                  {point}
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <div className="grid gap-px bg-line">
-            {supportingFeatures.map((feature) => (
-              <article key={feature.index} className="bg-background px-6 py-7">
-                <p className="text-xs uppercase tracking-[0.24em] text-muted">{feature.index}</p>
-                <h3 className="mt-5 font-serif text-3xl tracking-editorial text-foreground">{feature.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-muted">{feature.description}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-px grid gap-px border-x border-b border-line bg-line md:grid-cols-3">
-          {footerNotes.map((note) => (
-            <div key={note.label} className="bg-card px-5 py-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-muted">{note.label}</p>
-              <p className="mt-3 text-sm leading-7 text-muted">{note.value}</p>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {features.map((f) => (
+            <div
+              key={f.num}
+              className="group card-elevated rounded-2xl p-8 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(44,76,59,0.08)]"
+            >
+              <div className="flex items-start justify-between">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/8 text-primary transition-colors group-hover:bg-primary/12">
+                  {f.icon}
+                </span>
+                <span className="text-xs font-bold text-line">{f.num}</span>
+              </div>
+              <h3 className="mt-5 font-serif text-xl tracking-editorial text-foreground">
+                {f.title}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-muted">
+                {f.description}
+              </p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-12 text-center">
+          <Link href="/estimate" className="btn-primary">
+            Start Estimating
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </Link>
         </div>
       </div>
     </section>

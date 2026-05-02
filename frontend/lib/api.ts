@@ -274,3 +274,69 @@ export async function submitFinal(
   });
   return parseResponse<FinalPredictionResponse>(response);
 }
+
+// Phase 2 / Phase 3 — direct dataset-aware estimation (model mode only) ───────
+
+export type DatasetKey = "cocomo81" | "desharnais" | "china";
+
+export type DirectEstimatePayload = {
+  dataset: DatasetKey;
+  project_brief: UniversalProjectBrief;
+  follow_up_answers: Record<string, string | number | boolean>;
+  target_currency?: string;
+};
+
+export async function submitDirectEstimate(
+  payload: DirectEstimatePayload,
+): Promise<FinalPredictionResponse> {
+  const response = await fetch(`${API_BASE_URL}/predict/estimate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseResponse<FinalPredictionResponse>(response);
+}
+
+// Phase 4 — Chatbot ───────────────────────────────────────────────────────────
+
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type EstimationContext = {
+  dataset: string;
+  effort_months: number;
+  confidence: number;
+  prediction_mode: string;
+  display_cost: number;
+  target_currency: string;
+  base_cost_inr: number;
+  monthly_rate_inr: number;
+  exchange_rate: number;
+  assumptions: string[];
+  warnings: string[];
+};
+
+export type ChatRequest = {
+  message: string;
+  context: EstimationContext;
+  history: ChatMessage[];
+};
+
+export type ChatResponse = {
+  reply: string;
+  history: ChatMessage[];
+};
+
+export async function sendChatMessage(
+  request: ChatRequest,
+): Promise<ChatResponse> {
+  const response = await fetch(`${API_BASE_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(request),
+  });
+  return parseResponse<ChatResponse>(response);
+}
+

@@ -1,0 +1,118 @@
+"use client";
+
+import { Clock, Database, Shield, Users, Wrench } from "@phosphor-icons/react";
+
+import SelectInput from "@/components/estimation/SelectInput";
+import type { AdvancedInputs } from "@/components/estimation/types";
+
+type Step3AdvancedInputsProps = {
+  showAdvanced: boolean;
+  onToggleAdvanced: (enabled: boolean) => void;
+  values: AdvancedInputs;
+  onChange: (values: AdvancedInputs) => void;
+};
+
+export default function Step3AdvancedInputs({
+  showAdvanced,
+  onToggleAdvanced,
+  values,
+  onChange,
+}: Step3AdvancedInputsProps) {
+  return (
+    <div className="animate-fade-in-up space-y-6">
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Advanced Inputs</h2>
+        <p className="mt-2 text-sm text-muted">Optional settings for better estimate precision.</p>
+      </div>
+
+      <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-line/60 bg-card px-5 py-4 shadow-sm">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Show Advanced Inputs</p>
+          <p className="text-xs text-muted">Turn this on to tune technical and team factors.</p>
+        </div>
+        <input
+          type="checkbox"
+          checked={showAdvanced}
+          onChange={(event) => onToggleAdvanced(event.target.checked)}
+          className="h-5 w-5 rounded border-line/60 text-primary focus:ring-primary/20"
+        />
+      </label>
+
+      {showAdvanced && (
+        <div className="space-y-5">
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">Technical Factors</h3>
+            <div className="space-y-3">
+              <SelectInput
+                label="Reliability Requirement"
+                helperText="How critical is the system?"
+                value={values.reliabilityRequirement}
+                onChange={(reliabilityRequirement) => onChange({ ...values, reliabilityRequirement: reliabilityRequirement as AdvancedInputs["reliabilityRequirement"] })}
+                options={[
+                  { value: "low", label: "Low" },
+                  { value: "medium", label: "Medium" },
+                  { value: "high", label: "High" },
+                ]}
+                icon={Shield}
+              />
+              <SelectInput
+                label="Data Intensity"
+                helperText="How much data does the system handle?"
+                value={values.dataIntensity}
+                onChange={(dataIntensity) => onChange({ ...values, dataIntensity: dataIntensity as AdvancedInputs["dataIntensity"] })}
+                options={[
+                  { value: "low", label: "Low" },
+                  { value: "medium", label: "Medium" },
+                  { value: "high", label: "High" },
+                ]}
+                icon={Database}
+              />
+              <SelectInput
+                label="Tooling Maturity"
+                helperText="How mature are your tools and frameworks?"
+                value={values.toolingMaturity}
+                onChange={(toolingMaturity) => onChange({ ...values, toolingMaturity: toolingMaturity as AdvancedInputs["toolingMaturity"] })}
+                options={[
+                  { value: "experimental", label: "Experimental" },
+                  { value: "stable", label: "Stable" },
+                  { value: "optimized", label: "Optimized" },
+                ]}
+                icon={Wrench}
+              />
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">Team Factors</h3>
+            <div className="space-y-3">
+              <SelectInput
+                label="Team Familiarity"
+                helperText="How familiar is your team with this domain?"
+                value={values.teamFamiliarity}
+                onChange={(teamFamiliarity) => onChange({ ...values, teamFamiliarity: teamFamiliarity as AdvancedInputs["teamFamiliarity"] })}
+                options={[
+                  { value: "new", label: "New" },
+                  { value: "some_experience", label: "Some Experience" },
+                  { value: "expert", label: "Expert" },
+                ]}
+                icon={Users}
+              />
+              <SelectInput
+                label="Time Constraint"
+                helperText="How strict is the project deadline?"
+                value={values.timeConstraint}
+                onChange={(timeConstraint) => onChange({ ...values, timeConstraint: timeConstraint as AdvancedInputs["timeConstraint"] })}
+                options={[
+                  { value: "flexible", label: "Flexible" },
+                  { value: "moderate", label: "Moderate" },
+                  { value: "tight", label: "Tight" },
+                ]}
+                icon={Clock}
+              />
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}

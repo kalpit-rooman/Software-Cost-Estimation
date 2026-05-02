@@ -1,8 +1,8 @@
 const previewRows = [
-  { label: "Random Forest", value: "$82.4k", width: "78%" },
-  { label: "XGBoost", value: "$79.1k", width: "68%" },
-  { label: "Linear Regression", value: "$86.8k", width: "84%" },
-  { label: "Ensemble", value: "$82.7k", width: "80%" },
+  { label: "Stage 1 intake", value: "Universal brief", width: "84%" },
+  { label: "Stage 2 follow-up", value: "Adaptive pack", width: "72%" },
+  { label: "Final estimate", value: "Effort + cost", width: "90%" },
+  { label: "Confidence", value: "Assumptions + warnings", width: "76%" },
 ];
 
 const editorialNotes = [
@@ -12,22 +12,22 @@ const editorialNotes = [
   },
   {
     title: "Connected to the backend",
-    body: "The home page remains wired to live FastAPI endpoints rather than static placeholders.",
+    body: "The home page runs the live two-step FastAPI contract rather than static placeholder responses.",
   },
 ];
 
 const signalRows = [
   {
-    label: "Three datasets",
-    value: "China, COCOMO-81, Desharnais",
+    label: "Adaptive intake",
+    value: "Universal brief first, contextual follow-up second",
   },
   {
-    label: "Prediction stack",
-    value: "Random Forest, XGBoost, Linear Regression, Ensemble",
+    label: "Public output",
+    value: "Effort, cost breakdown, confidence, assumptions, warnings",
   },
   {
-    label: "Interface brief",
-    value: "KLOC, complexity, team experience, reliability",
+    label: "Runtime control",
+    value: "Admin-managed mode, provider, profile, and monthly INR rate",
   },
 ];
 
@@ -48,8 +48,8 @@ export default function Hero() {
               <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted">In this edition</p>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-muted">
                 <li>Live backend integration, not a static concept page.</li>
-                <li>Dataset-specific estimation framed as a readable brief.</li>
-                <li>Ensemble results surfaced without hiding the individual model outputs.</li>
+                <li>Adaptive two-step estimation framed as a readable brief.</li>
+                <li>Confidence context surfaced without exposing backend internals.</li>
               </ul>
             </div>
           </div>
@@ -67,7 +67,7 @@ export default function Hero() {
             </h1>
 
             <p className="mt-8 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-              Predict software development cost using machine learning and ensemble models, then read the outcome in a layout built for confidence rather than dashboard repetition.
+              Predict software development effort and cost through an adaptive two-step estimator, then review assumptions and confidence in a layout built for deliberate decisions.
             </p>
 
             <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -110,10 +110,10 @@ export default function Hero() {
               <div>
                 <p className="editorial-kicker">System view</p>
                 <h2 className="mt-4 font-serif text-4xl tracking-editorial text-foreground sm:text-5xl">
-                  Three datasets, one readable operating surface.
+                  One intake flow, one readable operating surface.
                 </h2>
                 <p className="mt-6 text-base leading-8 text-muted sm:text-lg">
-                  The home page introduces the logic of the system before the user enters the demo: multiple baseline models, one ensemble, and dataset-specific estimation paths rendered as a single narrative.
+                  The home page introduces the estimation workflow before the user enters the demo: universal intake, adaptive follow-up, and public-safe effort plus cost output.
                 </p>
               </div>
 
@@ -122,11 +122,11 @@ export default function Hero() {
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line/80 pb-4">
                     <div>
                       <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted">Preview plate</p>
-                      <p className="mt-2 font-serif text-2xl tracking-editorial text-foreground">Model comparison ledger</p>
+                      <p className="mt-2 font-serif text-2xl tracking-editorial text-foreground">Adaptive estimation ledger</p>
                     </div>
                     <div className="border border-line bg-card/80 px-4 py-3 text-right">
-                      <p className="text-[0.68rem] uppercase tracking-[0.24em] text-muted">Best model</p>
-                      <p className="mt-2 font-serif text-2xl text-foreground">Random Forest</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.24em] text-muted">Output mode</p>
+                      <p className="mt-2 font-serif text-2xl text-foreground">AI or Model</p>
                     </div>
                   </div>
 

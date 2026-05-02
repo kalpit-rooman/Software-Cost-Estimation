@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Manrope, Newsreader } from "next/font/google";
 
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import "./globals.css";
 
 const sans = Manrope({
@@ -17,8 +19,12 @@ const serif = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Software Cost Estimation",
-  description: "Predict software development cost using machine learning and ensemble models.",
+  title: {
+    template: "%s | SoftEstimate",
+    default: "SoftEstimate — Software Cost Estimation",
+  },
+  description:
+    "Predict software development effort and cost using calibrated ML models trained on COCOMO, Desharnais, and China datasets.",
 };
 
 export default function RootLayout({
@@ -28,8 +34,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${sans.variable} ${serif.variable} bg-background text-foreground antialiased`}>
-        {children}
+      <body
+        className={`${sans.variable} ${serif.variable} bg-background text-foreground antialiased`}
+      >
+        <Navbar />
+        <main className="overflow-hidden">{children}</main>
+        <Footer />
       </body>
     </html>
   );
