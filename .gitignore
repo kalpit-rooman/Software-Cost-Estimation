@@ -31,3 +31,33 @@ frontend/out/
 # pytest cache
 .pytest_cache/
 **/.pytest_cache/
+
+# Environment / secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+
+# Node
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+
+# Models / data artefacts (large files)
+models/*.h5
+models/*.pkl
+models/**/*.h5
+models/**/*.pkl
+results/
+
+# OS
+.DS_Store
+Thumbs.db
