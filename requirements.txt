@@ -10,3 +10,4 @@ seaborn>=0.12
 jupyter
 fastapi>=0.115
 uvicorn[standard]>=0.30
+redis>=5.0

@@ -38,6 +38,8 @@ Open `backend/.env` and fill in your values. Key settings:
 | `GROQ_API_KEY` | — | Required when `AI_PROVIDER=groq` |
 | `AI_PROFILE` | `balanced` | Prompt profile: `conservative`, `balanced`, or `optimistic` |
 | `DEFAULT_MONTHLY_RATE_INR` | `150000` | Blended monthly rate per person used for cost derivation |
+| `REDIS_URL` | — | Required for reliable Stage-1 to Stage-2 intake handoff in multi-worker production |
+| `INTAKE_CACHE_TTL_SECONDS` | `3600` | Expiry window (seconds) for intake context between `/predict/intake` and `/predict/final` |
 | `ADMIN_API_KEY` | — | Set a strong random string to enable the `/admin/*` endpoints |
 
 ---

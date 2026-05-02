@@ -10,6 +10,7 @@ from services.router import UniversalRouter
 from services.ai_orchestrator import AIOrchestrator
 from services.cost_converter import effort_to_inr
 from services.currency_converter import convert_from_inr
+from services.intake_cache import intake_context_store
 from services.model_orchestrator import ModelOrchestrator
 from services.state_manager import get_state
 from schemas.request_response import (
@@ -37,24 +38,16 @@ universal_router = UniversalRouter()
 universal_mapper = UniversalMapper()
 ai_orchestrator = AIOrchestrator()
 model_orchestrator = ModelOrchestrator()
-intake_metadata_cache: dict[str, RouteInferenceMetadata] = {}
-intake_payload_cache: dict[str, NormalizedUniversalPredictionRequest] = {}
-MAX_CACHED_INTAKES = 1000
 
 
 def cache_intake_context(metadata: RouteInferenceMetadata, normalized_payload: NormalizedUniversalPredictionRequest) -> None:
-    if len(intake_metadata_cache) >= MAX_CACHED_INTAKES:
-        oldest_key = next(iter(intake_metadata_cache))
-        intake_metadata_cache.pop(oldest_key, None)
-        intake_payload_cache.pop(oldest_key, None)
-    intake_metadata_cache[metadata.intake_id] = metadata
-    intake_payload_cache[metadata.intake_id] = normalized_payload
+    intake_context_store.cache_context(metadata, normalized_payload)
 
 
 def get_intake_context(intake_id: str) -> tuple[RouteInferenceMetadata, NormalizedUniversalPredictionRequest]:
-    metadata = intake_metadata_cache.get(intake_id)
-    payload = intake_payload_cache.get(intake_id)
-    if metadata is None or payload is None:
+    try:
+        metadata, payload = intake_context_store.get_context(intake_id)
+    except KeyError:
         raise HTTPException(status_code=404, detail="intake_id not found or expired")
     return metadata, payload
 

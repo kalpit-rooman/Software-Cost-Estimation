@@ -38,3 +38,10 @@ AI_PROFILE: str = os.getenv("AI_PROFILE", "balanced")
 # ---------------------------------------------------------------------------
 # Blended monthly rate per person in INR.  Admin can override via env var.
 DEFAULT_MONTHLY_RATE_INR: float = float(os.getenv("DEFAULT_MONTHLY_RATE_INR", "150000"))
+
+# ---------------------------------------------------------------------------
+# Intake cache settings (Phase 10)
+# ---------------------------------------------------------------------------
+REDIS_URL: str = os.getenv("REDIS_URL", "")
+INTAKE_CACHE_TTL_SECONDS: int = int(os.getenv("INTAKE_CACHE_TTL_SECONDS", "3600"))
+MAX_CACHED_INTAKES: int = int(os.getenv("MAX_CACHED_INTAKES", "1000"))
