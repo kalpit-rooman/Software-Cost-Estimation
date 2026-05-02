@@ -23,19 +23,19 @@ MODEL_OUTPUT_KEYS: Dict[str, str] = {
 
 MODEL_RMSE_SCORES: Dict[str, Dict[str, float]] = {
     "china": {
-        "RandomForest": 1604.754387,
-        "XGBoost": 1503.300169,
-        "LinearRegression": 1296.143319,
+        "RandomForest": 1636.3238338522758,
+        "XGBoost": 1467.3213518914497,
+        "LinearRegression": 53165.28424556006,
     },
     "cocomo81": {
-        "RandomForest": 430.002079,
-        "XGBoost": 620.308905,
-        "LinearRegression": 1922.377594,
+        "RandomForest": 482.4925319563499,
+        "XGBoost": 451.19558709684895,
+        "LinearRegression": 395.08088778481056,
     },
     "desharnais": {
-        "RandomForest": 2294.399361,
-        "XGBoost": 2245.187760,
-        "LinearRegression": 1943.914123,
+        "RandomForest": 2363.717631202568,
+        "XGBoost": 2548.4416951395297,
+        "LinearRegression": 1997.9362501688217,
     },
 }
 

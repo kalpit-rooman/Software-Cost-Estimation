@@ -37,6 +37,7 @@ class DatasetModelBundle:
 
     models: Dict[str, Any]
     feature_names: tuple[str, ...]
+    loaded_model_names: tuple[str, ...]
 
 
 class PredictionService:
@@ -85,15 +86,18 @@ class PredictionService:
         ensemble_prediction = self._predict_ensemble(
             predictions,
             dataset_name,
+            model_names=bundle.loaded_model_names,
             ensemble_method=ensemble_method,
             weights=weights,
         )
+
+        fallback_prediction = float(ensemble_prediction)
         return {
-            MODEL_OUTPUT_KEYS["RandomForest"]: predictions["RandomForest"],
-            MODEL_OUTPUT_KEYS["XGBoost"]: predictions["XGBoost"],
-            MODEL_OUTPUT_KEYS["LinearRegression"]: predictions["LinearRegression"],
+            MODEL_OUTPUT_KEYS["RandomForest"]: predictions.get("RandomForest", fallback_prediction),
+            MODEL_OUTPUT_KEYS["XGBoost"]: predictions.get("XGBoost", fallback_prediction),
+            MODEL_OUTPUT_KEYS["LinearRegression"]: predictions.get("LinearRegression", fallback_prediction),
             "ensemble_prediction": ensemble_prediction,
-            "best_model": self._select_best_model(dataset_name),
+            "best_model": self._select_best_model(dataset_name, bundle.loaded_model_names),
         }
 
     def _get_dataset_bundle(self, dataset_name: str) -> DatasetModelBundle:
@@ -108,7 +112,7 @@ class PredictionService:
         return self._dataset_cache[normalized_dataset]
 
     def _load_dataset_bundle(self, dataset_name: str) -> DatasetModelBundle:
-        """Load and validate the three saved baseline pipelines for a dataset."""
+        """Load and validate the saved baseline pipelines for a dataset."""
         model_dir = self.dataset_model_dirs[dataset_name]
         missing_files = [
             str(model_dir / file_name)
@@ -118,11 +122,23 @@ class PredictionService:
         if missing_files:
             raise FileNotFoundError("Missing model artifacts: " + ", ".join(missing_files))
 
-        models = {
-            model_name: load(model_dir / file_name)
-            for model_name, file_name in MODEL_FILE_NAMES.items()
-        }
-        feature_names = self._resolve_feature_names(models["RandomForest"])
+        models: Dict[str, Any] = {}
+        for model_name, file_name in MODEL_FILE_NAMES.items():
+            try:
+                models[model_name] = load(model_dir / file_name)
+            except ModuleNotFoundError as exc:
+                if model_name == "XGBoost" and "xgboost" in str(exc).lower():
+                    # Keep the service available when XGBoost is not installed locally.
+                    continue
+                raise
+
+        if not models:
+            raise PredictionServiceError(
+                f"No models could be loaded for dataset '{dataset_name}'"
+            )
+
+        first_model_name = next(iter(models))
+        feature_names = self._resolve_feature_names(models[first_model_name])
         for model_name, model in models.items():
             model_feature_names = self._resolve_feature_names(model)
             if model_feature_names != feature_names:
@@ -130,7 +146,11 @@ class PredictionService:
                     f"Feature schema mismatch for dataset '{dataset_name}' in model '{model_name}'"
                 )
 
-        return DatasetModelBundle(models=models, feature_names=feature_names)
+        return DatasetModelBundle(
+            models=models,
+            feature_names=feature_names,
+            loaded_model_names=tuple(models.keys()),
+        )
 
     def _resolve_feature_names(self, model: Any) -> tuple[str, ...]:
         """Resolve the input feature names embedded in a saved sklearn pipeline."""
@@ -180,11 +200,12 @@ class PredictionService:
         predictions: Mapping[str, float],
         dataset_name: str,
         *,
+        model_names: tuple[str, ...],
         ensemble_method: str,
         weights: Mapping[str, float] | None,
     ) -> float:
         """Combine model predictions using simple or weighted averaging."""
-        ordered_model_names = list(MODEL_OUTPUT_KEYS.keys())
+        ordered_model_names = list(model_names)
         ordered_predictions = np.asarray(
             [float(predictions[model_name]) for model_name in ordered_model_names],
             dtype=np.float64,
@@ -197,7 +218,11 @@ class PredictionService:
                 "ensemble_method must be either 'simple' or 'weighted'"
             )
 
-        normalized_weights = self._normalize_weights(dataset_name, weights)
+        normalized_weights = self._normalize_weights(
+            dataset_name,
+            model_names=ordered_model_names,
+            weights=weights,
+        )
         ordered_weights = np.asarray(
             [normalized_weights[model_name] for model_name in ordered_model_names],
             dtype=np.float64,
@@ -207,26 +232,29 @@ class PredictionService:
     def _normalize_weights(
         self,
         dataset_name: str,
+        *,
+        model_names: list[str],
         weights: Mapping[str, float] | None,
     ) -> Dict[str, float]:
         """Resolve, validate, and normalize ensemble weights."""
-        resolved_weights = dict(weights) if weights is not None else dict(self.default_weights.get(dataset_name, {}))
-        ordered_model_names = list(MODEL_OUTPUT_KEYS.keys())
-        if not resolved_weights:
-            raise InvalidInputError(
-                f"No ensemble weights configured for dataset '{dataset_name}'"
-            )
+        if not model_names:
+            raise InvalidInputError("No models available for ensemble weighting")
 
-        unknown_keys = sorted(set(resolved_weights) - set(ordered_model_names))
-        if unknown_keys:
-            raise InvalidInputError(f"Unknown ensemble weight keys: {unknown_keys}")
-
-        missing_keys = [model_name for model_name in ordered_model_names if model_name not in resolved_weights]
-        if missing_keys:
-            raise InvalidInputError(f"Missing ensemble weights for models: {missing_keys}")
+        all_known_model_names = list(MODEL_OUTPUT_KEYS.keys())
+        if weights is not None:
+            unknown_keys = sorted(set(weights) - set(all_known_model_names))
+            if unknown_keys:
+                raise InvalidInputError(f"Unknown ensemble weight keys: {unknown_keys}")
+            resolved_weights = {model_name: float(weights.get(model_name, 0.0)) for model_name in model_names}
+        else:
+            configured_defaults = self.default_weights.get(dataset_name, {})
+            resolved_weights = {
+                model_name: float(configured_defaults.get(model_name, 0.0))
+                for model_name in model_names
+            }
 
         weight_values = np.asarray(
-            [float(resolved_weights[model_name]) for model_name in ordered_model_names],
+            [resolved_weights[model_name] for model_name in model_names],
             dtype=np.float64,
         )
         if np.any(weight_values < 0):
@@ -234,22 +262,31 @@ class PredictionService:
 
         weight_sum = float(np.sum(weight_values))
         if weight_sum <= 0:
-            raise InvalidInputError("Ensemble weights must sum to a positive value")
+            equal_weight = 1.0 / len(model_names)
+            return {model_name: equal_weight for model_name in model_names}
 
         normalized_values = weight_values / weight_sum
         return {
             model_name: float(weight)
-            for model_name, weight in zip(ordered_model_names, normalized_values)
+            for model_name, weight in zip(model_names, normalized_values)
         }
 
-    def _select_best_model(self, dataset_name: str) -> str:
+    def _select_best_model(self, dataset_name: str, model_names: tuple[str, ...]) -> str:
         """Select the best production model for a dataset using the lowest RMSE."""
         dataset_scores = self.rmse_scores.get(dataset_name)
         if not dataset_scores:
             raise PredictionServiceError(
                 f"No RMSE scores configured for dataset '{dataset_name}'"
             )
-        return min(dataset_scores, key=dataset_scores.get)
+
+        scored_models = {
+            model_name: score
+            for model_name, score in dataset_scores.items()
+            if model_name in model_names
+        }
+        if not scored_models:
+            return model_names[0]
+        return min(scored_models, key=scored_models.get)
 
 
 _PREDICTION_SERVICE: PredictionService | None = None

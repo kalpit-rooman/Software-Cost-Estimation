@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 import core.config as cfg
 from core.config import INSIGHT_TEMPLATE
-from services.followup_questions import get_followup_pack_by_id, normalize_followup_answers
+from services.followup_questions import get_followup_pack_by_id, get_followup_pack_for_route, normalize_followup_answers
 from services.mapper import UniversalMapper
 from services.router import UniversalRouter
 from services.ai_orchestrator import AIOrchestrator
@@ -14,12 +14,14 @@ from services.model_orchestrator import ModelOrchestrator
 from services.state_manager import get_state
 from schemas.request_response import (
     CostBreakdown,
+    DirectEstimateRequest,
     EstimatedEffort,
     FinalAssemblyRequest,
     FinalAssemblyResponse,
     FinalPredictionRequest,
     FinalPredictionResponse,
     IntakeFollowUpResponse,
+    NormalizedUniversalProjectBrief,
     PublicIntakeResponse,
     RouteInferenceMetadata,
     NormalizedUniversalPredictionRequest,
@@ -269,6 +271,115 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
     )
     return FinalPredictionResponse(
         intake_id=payload.intake_id,
+        estimated_effort=estimated_effort,
+        cost_breakdown=cost_breakdown,
+        prediction_confidence=round(confidence, 4),
+        assumptions=assumptions,
+        warnings=warnings,
+    )
+
+
+@router.post(
+    "/predict/estimate",
+    response_model=FinalPredictionResponse,
+    tags=["Estimation"],
+    summary="Direct estimate — user selects dataset, always model mode",
+    responses={
+        422: {"description": "Invalid input values or follow-up answers"},
+        500: {"description": "Model prediction error"},
+    },
+)
+def predict_direct(payload: DirectEstimateRequest) -> FinalPredictionResponse:
+    """
+    Direct estimation endpoint (Phase 2 / Phase 3).
+
+    The user selects the dataset explicitly from the UI. The backend:
+    1. Skips UniversalRouter entirely.
+    2. Normalises the project brief.
+    3. Validates follow-up answers against the pack for the chosen dataset.
+    4. Maps features via UniversalMapper.
+    5. Runs the ML ensemble (model mode only — no AI API key required).
+    6. Returns the same FinalPredictionResponse contract.
+    """
+    route = payload.dataset  # InternalRoute enum
+
+    # --- Normalise brief ---
+    normalized_brief = NormalizedUniversalProjectBrief(
+        num_screens=int(payload.project_brief.num_screens),
+        num_entities=int(payload.project_brief.num_entities),
+        duration_months=round(float(payload.project_brief.duration_months), 4),
+        team_experience_years=round(float(payload.project_brief.team_experience_years), 4),
+        pm_experience_years=round(float(payload.project_brief.pm_experience_years), 4),
+        complexity=payload.project_brief.complexity,
+        reliability=payload.project_brief.reliability,
+        team_size=int(payload.project_brief.team_size),
+        project_notes=payload.project_brief.project_notes,
+    )
+
+    # --- Normalise follow-up answers against the pack for this dataset ---
+    try:
+        follow_up_pack = get_followup_pack_for_route(route)
+        normalized_answers, unresolved_fields = normalize_followup_answers(
+            follow_up_pack, payload.follow_up_answers
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # --- Map universal brief → dataset-specific feature vector ---
+    mapped_features, mapping_diagnostics = universal_mapper.assemble(
+        route=route,
+        brief=normalized_brief,
+        follow_up_answers=normalized_answers,
+        unresolved_fields=unresolved_fields,
+    )
+
+    # --- ML ensemble (always model mode) ---
+    try:
+        result = model_orchestrator.estimate_effort(
+            route=route.value,
+            mapped_features=mapped_features,
+            mapping_confidence=float(mapping_diagnostics.mapping_confidence),
+            unresolved_fields=unresolved_fields,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    effort_months: float = result["effort_months"]
+    confidence: float = result["confidence"]
+    assumptions: list[str] = result["assumptions"]
+    warnings: list[str] = result["warnings"]
+
+    # --- Cost derivation ---
+    monthly_rate_inr = get_state().monthly_rate_inr
+    base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
+    target_currency = payload.target_currency
+    try:
+        display_cost, exchange_rate = convert_from_inr(base_cost_inr, target_currency)
+    except ValueError:
+        target_currency = "INR"
+        display_cost = base_cost_inr
+        exchange_rate = 1.0
+        warnings.append(
+            f"Requested currency '{payload.target_currency}' is not supported. Showing INR."
+        )
+
+    estimated_effort = EstimatedEffort(
+        effort_months=round(effort_months, 2),
+        confidence=round(confidence, 4),
+        assumptions=assumptions,
+        warnings=warnings,
+        prediction_mode="model",
+    )
+    cost_breakdown = CostBreakdown(
+        effort_months=round(effort_months, 2),
+        monthly_rate_inr=monthly_rate_inr,
+        base_cost_inr=base_cost_inr,
+        target_currency=target_currency,
+        display_cost=display_cost,
+        exchange_rate=exchange_rate,
+    )
+    return FinalPredictionResponse(
+        intake_id=f"direct-{route.value}",
         estimated_effort=estimated_effort,
         cost_breakdown=cost_breakdown,
         prediction_confidence=round(confidence, 4),

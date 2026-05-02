@@ -64,13 +64,34 @@ class ModelOrchestrator:
                 f"ML prediction failed for route '{route}': {exc}"
             ) from exc
 
-        effort_months = float(ml_result["ensemble_prediction"])
+        raw_prediction = float(ml_result["ensemble_prediction"])
+
+        # China and Desharnais datasets record effort in person-HOURS.
+        # COCOMO-81 records effort directly in person-months.
+        # Convert to a common unit (person-months) before any further processing.
+        _HOURS_PER_MONTH = 160.0
+        _HOUR_BASED_ROUTES = {"china", "desharnais"}
+        if route in _HOUR_BASED_ROUTES:
+            effort_months = raw_prediction / _HOURS_PER_MONTH
+        else:
+            effort_months = raw_prediction
+
+        # Guard: EstimatedEffort schema caps at 600 person-months.
+        _EFFORT_CAP = 600.0
+        capped = effort_months > _EFFORT_CAP
+        if capped:
+            effort_months = _EFFORT_CAP
 
         assumptions = [
             "Effort derived from an ensemble of calibrated ML models (CNN, MLP, baselines).",
             f"Internal estimation route: {route}.",
         ]
         warnings: list[str] = []
+        if capped:
+            warnings.append(
+                "Predicted effort exceeded the estimation ceiling (600 person-months). "
+                "Result has been capped. Consider breaking the project into phases."
+            )
         if unresolved_fields:
             warnings.append(
                 f"Some inputs used default values: {', '.join(unresolved_fields)}. "

@@ -306,3 +306,72 @@ class HealthResponse(BaseModel):
 
 class DatasetsResponse(BaseModel):
     datasets: list[str]
+
+
+class DirectEstimateRequest(BaseModel):
+    """Public request for POST /predict/estimate.
+
+    The user explicitly selects the dataset. The backend skips the
+    UniversalRouter and always uses model mode — no API key required.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    dataset: InternalRoute  # "cocomo81" | "desharnais" | "china"
+    project_brief: UniversalProjectBrief
+    follow_up_answers: dict[str, Any] = Field(default_factory=dict)
+    target_currency: str = Field(default="INR", min_length=3, max_length=3)
+
+    @field_validator("target_currency", mode="before")
+    @classmethod
+    def normalize_currency(cls, value: Any) -> str:
+        if value is None:
+            return "INR"
+        if not isinstance(value, str):
+            raise TypeError("target_currency must be a string")
+        normalized = value.strip().upper()
+        if len(normalized) != 3 or not normalized.isalpha():
+            raise ValueError("target_currency must be a 3-letter alphabetic currency code")
+        return normalized
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 – Chatbot schemas
+# ---------------------------------------------------------------------------
+
+
+class ChatMessage(BaseModel):
+    """A single turn in the conversation history."""
+
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1, max_length=8000)
+
+
+class EstimationContext(BaseModel):
+    """Serialised estimation result sent from the frontend to seed the chatbot."""
+
+    dataset: str  # e.g. "cocomo81"
+    effort_months: float
+    confidence: float
+    prediction_mode: str
+    display_cost: float
+    target_currency: str
+    base_cost_inr: float
+    monthly_rate_inr: float
+    exchange_rate: float
+    assumptions: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(..., min_length=1, max_length=2000)
+    context: EstimationContext
+    history: list[ChatMessage] = Field(default_factory=list, max_length=20)
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    history: list[ChatMessage]
+
