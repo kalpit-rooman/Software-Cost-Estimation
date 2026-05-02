@@ -1,3 +1,5 @@
+import RetroComputer from "./RetroComputer";
+
 const previewRows = [
   { label: "Stage 1 intake", value: "Universal brief", width: "84%" },
   { label: "Stage 2 follow-up", value: "Adaptive pack", width: "72%" },
@@ -86,21 +88,8 @@ export default function Hero() {
             </div>
           </div>
 
-          <div className="space-y-px border border-line bg-line">
-            <div className="paper-panel bg-card px-5 py-5">
-              <p className="editorial-kicker">Current read</p>
-              <h2 className="mt-4 font-serif text-3xl tracking-editorial text-foreground">A deliberate interface for live estimation.</h2>
-              <p className="mt-4 text-sm leading-7 text-muted">
-                Premium editorial cues, thin borders, and a quieter palette keep the page from collapsing into the usual SaaS template language.
-              </p>
-            </div>
-
-            {editorialNotes.map((note) => (
-              <article key={note.title} className="bg-background px-5 py-5">
-                <p className="text-[0.68rem] uppercase tracking-[0.26em] text-muted">{note.title}</p>
-                <p className="mt-3 text-sm leading-7 text-muted">{note.body}</p>
-              </article>
-            ))}
+          <div className="relative border border-line bg-[#ece7da] flex items-center justify-center min-h-[500px] overflow-hidden lg:overflow-visible">
+            <RetroComputer />
           </div>
         </div>
 

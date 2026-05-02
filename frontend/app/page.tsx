@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Features from "@/components/Features";
+import RetroComputer from "@/components/RetroComputer";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -43,7 +44,7 @@ export default function HomePage() {
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative section-wash overflow-hidden">
+      <section className="relative bg-[#f3efe6] overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary/[0.04] blur-3xl" />
@@ -51,35 +52,34 @@ export default function HomePage() {
           <div className="absolute top-[20%] left-[50%] w-[300px] h-[300px] rounded-full bg-gold/[0.05] blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-32 lg:px-10 lg:pt-40 lg:pb-28">
-          <div className="max-w-4xl animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-8">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                ML-Powered Estimation
-              </span>
+        <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-20 lg:px-10 lg:pt-24 lg:pb-28">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="max-w-4xl animate-fade-in-up">
+              <h1 className="font-serif text-[clamp(2.4rem,5.2vw,4.8rem)] leading-[1.1] tracking-[-0.03em] text-foreground">
+                Predict software cost
+                <br />
+                <span className="text-primary italic">with real data.</span>
+              </h1>
+
+              <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg animate-fade-in-up delay-100">
+                Pick your project type, fill in a short brief, and get a calibrated 
+                effort and cost estimate in seconds — driven by ensemble ML models
+                trained on industry-standard datasets.
+              </p>
+
+              <div className="mt-10 flex flex-wrap items-center gap-4 animate-fade-in-up delay-200">
+                <Link href="/estimate" className="btn-primary">
+                  Start Estimating
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </Link>
+                <Link href="/#features" className="btn-secondary">
+                  Explore Features
+                </Link>
+              </div>
             </div>
 
-            <h1 className="font-serif text-[clamp(2.8rem,6.5vw,5.5rem)] leading-[1.05] tracking-[-0.035em] text-foreground">
-              Predict software cost
-              <br />
-              <span className="text-primary">with real data.</span>
-            </h1>
-
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-muted sm:text-xl animate-fade-in-up delay-100">
-              Pick your project type, fill in a short brief, and get a calibrated 
-              effort and cost estimate in seconds — driven by ensemble ML models
-              trained on industry-standard datasets.
-            </p>
-
-            <div className="mt-10 flex flex-wrap items-center gap-4 animate-fade-in-up delay-200">
-              <Link href="/estimate" className="btn-primary">
-                Start Estimating
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-              </Link>
-              <Link href="/#features" className="btn-secondary">
-                Explore Features
-              </Link>
+            <div className="hidden lg:flex justify-center items-center w-full h-full animate-fade-in-up delay-300">
+              <RetroComputer />
             </div>
           </div>
 

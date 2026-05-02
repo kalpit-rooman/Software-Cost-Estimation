@@ -17,7 +17,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="SoftEstimate Logo" className="h-9 w-9 rounded-lg object-contain" />
+              <img src="/logo.png" alt="SoftEstimate Logo" className="h-9 w-9 object-contain" />
               <span className="font-serif text-xl text-white">SoftEstimate</span>
             </div>
             <p className="mt-5 max-w-md text-sm leading-7 text-white/50">

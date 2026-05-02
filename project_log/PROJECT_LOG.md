@@ -298,3 +298,20 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Installed requested icon package in the frontend workspace: `@phosphor-icons/react`.
 - Verified no editor diagnostics in all newly added estimation flow components.
 - Executed frontend production build command from terminal and confirmed success (`npm run build` exit code `0`).
+
+### 2026-05-02 - Production fix: Redis-backed intake cache for multi-worker reliability
+
+- Replaced the process-local Stage 1 intake cache in `backend/routes/predict.py` with a shared cache store backed by Redis, removing the cross-worker `intake_id not found` failure mode in multi-worker deployments.
+- Added a new cache service module at `backend/services/intake_cache.py` that:
+	- stores `RouteInferenceMetadata` and `NormalizedUniversalPredictionRequest` as JSON in Redis with TTL,
+	- uses namespaced keys per intake,
+	- falls back to bounded in-memory cache only when Redis is not configured or temporarily unavailable,
+	- enforces TTL expiry in fallback mode as well.
+- Added production cache configuration knobs in `backend/core/config.py`:
+	- `REDIS_URL`
+	- `INTAKE_CACHE_TTL_SECONDS`
+	- `MAX_CACHED_INTAKES`
+- Updated `backend/.env.example` with Redis/intake cache settings and operational comments for production usage.
+- Added `redis>=5.0` to `requirements.txt` so Redis-backed caching works in deployed environments.
+- Validation: editor diagnostics reported no errors in the touched backend files (`backend/services/intake_cache.py`, `backend/routes/predict.py`, `backend/core/config.py`).
+- Remaining deployment step: set `REDIS_URL` in production environment and ensure a reachable Redis instance before running multiple API workers.
