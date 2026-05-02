@@ -18,7 +18,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5">
               <img src="/icon.png" alt="SoftEstimate Logo" className="h-9 w-9 object-contain" />
-              <span className="font-serif text-xl text-white">SoftEstimate</span>
+              <span className="font-semibold tracking-[-0.02em] text-[#f3efe6] text-xl">SoftEstimate</span>
             </div>
             <p className="mt-5 max-w-md text-sm leading-7 text-white/50">
               An ML-powered software effort and cost estimation tool trained on
