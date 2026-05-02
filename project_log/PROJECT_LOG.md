@@ -1,6 +1,6 @@
 # Project Log
 
-Last updated: 2026-05-02 (Phase 7 complete)
+Last updated: 2026-04-25
 
 ## Project Summary
 
@@ -122,7 +122,6 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Processed datasets for all three data sources.
 - Saved CNN and CNN+PSO model artifacts.
 - Metrics CSVs comparing baselines and CNN variants.
-- A FastAPI backend scaffold under `backend/` for prediction, health, and dataset-metadata endpoints.
 
 ### Still pending or incomplete
 
@@ -134,16 +133,6 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 
 ## Latest Session Note
 
-### 2026-04-30 - Performance review and records log
-
-- Reviewed the saved metric artifacts in `results/metrics/holdout_results.csv`, `results/metrics/full_comparison_final.csv`, and `results/metrics/cnn_vs_pso_metrics.csv`.
-- Holdout snapshot: China best RMSE was `XGBoost` at `1467.3213518914497`; COCOMO81 best RMSE was `LinearRegression` at `395.08054838016204`; Desharnais best RMSE was `LinearRegression` at `1997.9377093894732`.
-- Holdout `CNN_PSO` RMSE was `3463.5213999688585` on China, `624.2937991076277` on COCOMO81, and `22388.06464600845` on Desharnais.
-- Final 5-fold snapshot: China best RMSE was `RandomForest` at `1285.6426800431962`; COCOMO81 best RMSE was `RandomForest` at `1032.5459839901773`; Desharnais best RMSE was `RandomForest` at `3464.0636729167513`.
-- Final 5-fold `CNN_PSO` mean RMSE was `556066.5595478723` on China, `1493.908563780196` on COCOMO81, and `312039.21563477995` on Desharnais.
-- `CNN_PSO_ensemble` improved the holdout RMSE relative to `CNN_PSO` on all three datasets, but the final 5-fold comparison still favors classical baselines.
-- Validation: this log entry was derived directly from the saved CSV artifacts; no model or code artifacts were changed in this step.
-
 ### 2026-04-25 - Metrics review and logging setup
 
 - Recomputed the direct delta between `cnn_baseline` and `cnn_pso` from the saved metric CSVs.
@@ -153,77 +142,6 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Added a dedicated skill to keep this log updated aggressively whenever project progress is reported.
 
 ## Chronological Log
-### 2026-05-02 – Phase 7 (Public API Consolidation) completed + smoke-tested
-
-**Phase 7 – Public API Consolidation:**
-- Added `PublicIntakeResponse` schema: `intake_id`, `follow_up_pack` (inline, no dataset name), `intake_version`, `next_step`.
-- Added `PublicErrorResponse` schema: `error_code`, `message`, `field?` — consistent error envelope.
-- `POST /predict/intake` now returns `PublicIntakeResponse` directly (follow-up pack embedded; frontend needs only 2 calls total).
-- Internal/legacy endpoints hidden from public OpenAPI docs via `include_in_schema=False`:
-  - `GET /predict/followup/{intake_id}` (deprecated)
-  - `POST /predict/final/assemble` (internal)
-  - `POST /predict/universal/normalize` (internal)
-  - `POST /predict` (legacy)
-- `POST /predict/intake` and `POST /predict/final` tagged `"Estimation"` with summaries and `responses=` code docs.
-- `backend/main.py` rewritten with full OpenAPI metadata: `title`, `version`, `description`, tag groups (`Estimation`, `Legacy`, `Internal`).
-- Standardized error shape: `_error_body(error_code, message, field)` helper + exception handlers for `InvalidDatasetError`, `InvalidInputError`, `ValidationError`, generic `Exception`.
-- Resilient lifespan: prediction service model load failure is now a warning, not a crash — adaptive endpoints work without loaded `.pkl` models (model mode still needs them at request time).
-
-**Smoke test (end-to-end with venv Python):**
-- `POST /predict/intake` → `adaptive_pack_beta`, 4 fields, `next_step=submit_followup_answers` ✅
-- `POST /predict/final` → `effort_months=504.83`, `base_cost_inr=75,723,896.94`, `display_cost(USD)=908,686.76`, `mode=model` ✅
-
-### 2026-05-01 – Phase 5 (AI Orchestrator) + Phase 6 (Cost/Currency Layer) implemented
-
-**Phase 5 – AI-First Prediction Orchestrator:**
-- Created abstract provider interface: `backend/services/ai_providers/base.py`
-- Created OpenAI-compatible adapter (supports OpenAI, Groq, Mistral, etc. via base URL override): `backend/services/ai_providers/openai_compatible.py`
-- Created Gemini adapter (v1beta REST, no SDK dependency): `backend/services/ai_providers/gemini.py`
-- Created three prompt profiles (conservative, balanced, optimistic): `backend/services/prompts/profiles.py`
-- Created AI response parser with JSON extraction fallback strategies: `backend/services/ai_response_parser.py`
-- Created guardrails with range validation and list clamping: `backend/services/guardrails.py`
-- Created AI orchestrator coordinating provider selection → prompt construction → parse → guardrail: `backend/services/ai_orchestrator.py`
-- Updated `backend/core/config.py` to load `PREDICTION_MODE`, `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `AI_PROFILE`, `DEFAULT_MONTHLY_RATE_INR` from `.env` via python-dotenv.
-- Created `.env.example` with all configurable settings documented.
-
-**Phase 6 – Effort-to-Cost and Currency Layer:**
-- Created `backend/services/cost_converter.py`: `effort_to_inr(effort_months, monthly_rate_inr) → float`
-- Created `backend/services/currency_converter.py`: static rate table (18 currencies), INR as base, `convert_from_inr() → (display_amount, rate)`
-- Added schemas to `backend/schemas/request_response.py`: `EstimatedEffort`, `CostBreakdown`, `FinalPredictionResponse`, `FinalPredictionRequest`
-
-**`POST /predict/final` endpoint added** (Phase 7 consolidation preview):
-- Accepts `intake_id + follow_up_answers + target_currency + profile_id`
-- Routes through mapper → effort prediction (AI mode or model mode) → cost derivation → currency conversion
-- Returns `FinalPredictionResponse` with effort, cost_breakdown, confidence, assumptions, warnings
-- Model mode uses `src/predictor.py` ensemble; AI mode calls the `AIOrchestrator`
-- Mode controlled by `PREDICTION_MODE` env var (default: `model`)
-
-**Validation:** All new files pass Pylance with no errors.
-### 2026-04-30 - Performance review and records log
-
-- Reviewed the current saved performance artifacts and recorded the exact values in the project log.
-- Holdout results from `results/metrics/holdout_results.csv` show the best RMSE per dataset as `XGBoost` on China at `1467.3213518914497`, `LinearRegression` on COCOMO81 at `395.08054838016204`, and `LinearRegression` on Desharnais at `1997.9377093894732`.
-- Holdout `CNN_PSO` RMSE remains `3463.5213999688585` for China, `624.2937991076277` for COCOMO81, and `22388.06464600845` for Desharnais.
-- Final 5-fold results from `results/metrics/full_comparison_final.csv` show the best RMSE per dataset as `RandomForest` on China at `1285.6426800431962`, `RandomForest` on COCOMO81 at `1032.5459839901773`, and `RandomForest` on Desharnais at `3464.0636729167513`.
-- Final `CNN_PSO` mean RMSE is `556066.5595478723` on China, `1493.908563780196` on COCOMO81, and `312039.21563477995` on Desharnais.
-- `CNN_PSO_ensemble` gives a lower holdout RMSE than `CNN_PSO` on all three datasets, but the final 5-fold comparison still does not beat the strongest classical baselines.
-
-### 2026-04-29 - CNN notebook rerun after interpretation fix
-
-- Reran the final code cell in `notebooks/04_cnn.ipynb` after updating the prediction wording.
-- Refreshed notebook outputs now report normalized effort values instead of person-months.
-- Exact rerun outputs:
-	- Best validation RMSE from PSO: `0.6392263206214015`
-	- Best hyperparameters: `filters=24`, `kernel_size=4`, `dense_units=64`, `learning_rate=0.009290183207085701`, `dropout_rate=0.3060942398917824`, `num_conv_layers=3`, `batch_size=8`
-	- Final TEST RMSE: `0.6902240729885462`
-	- Final TEST MAE: `0.48763418616435467`
-	- Example prediction output: `Model output = 1.24 -> Predicted normalized effort value for the selected project = 1.24`
-
-### 2026-04-29 - CNN notebook output interpretation corrected
-
-- Updated the final output wording in `notebooks/04_cnn.ipynb` so the reported prediction is described as a normalized effort value instead of person-months.
-- Added an explicit note in the notebook that the model predicts normalized effort values, which can be inverse-transformed to actual effort.
-- No metric values changed in this update; only the interpretation text was corrected.
 
 ### 2026-04-29 - CNN notebook final PSO-to-prediction flow executed
 
@@ -303,26 +221,6 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 
 ### 2026-04-25 - Clean benchmark artifacts regenerated successfully
 
-
-### 2026-05-01 - Next.js frontend added for production prediction demo
-
-- Added a new `frontend/` package as a monorepo-style Next.js App Router application using TypeScript, Tailwind CSS, and modular React components.
-- Implemented a single-page editorial interface with `Navbar`, `Hero`, `Features`, `DemoSection`, and `Footer` components, keeping the primary focus on the live prediction demo.
-- Added `frontend/lib/api.ts` with typed `getDatasets()` and `predictCost()` helpers targeting the FastAPI backend at `http://localhost:8000` by default, with optional override through `NEXT_PUBLIC_API_BASE_URL`.
-- Implemented `components/DemoSection.tsx` as a controlled client component with dataset loading from `/datasets`, input validation, loading and error states, POST integration with `/predict`, ensemble-first result presentation, model-comparison bars, and backend insight rendering.
-- Added a dataset-aware payload translation layer in the demo so the compact UI inputs (`KLOC`, `Complexity`, `Team Experience`, `Reliability`) are converted into valid feature proxies for the China, COCOMO-81, and Desharnais baseline pipelines.
-- Added `PROJECT_SETUP.md` at the repository root with separate backend and frontend startup commands for the monorepo workflow.
-- Updated `.gitignore` to exclude `frontend/node_modules`, `frontend/.next`, and `frontend/out`.
-- Validation: `npm install` completed successfully in `frontend/`, editor diagnostics reported no frontend errors, and `npm run build` completed successfully with a production Next.js build.
-
-### 2026-05-01 - Editorial homepage redesign for the Next.js frontend
-
-- Reworked the landing page presentation in `frontend/app/page.tsx`, `frontend/components/Navbar.tsx`, `frontend/components/Hero.tsx`, `frontend/components/Features.tsx`, and `frontend/components/Footer.tsx` to replace the earlier symmetric product-template look with a more distinctive editorial composition.
-- Updated `frontend/app/globals.css` with a warmer paper palette, custom panel and section-wash utilities, and an archival-style diagram surface so the visual language feels closer to a publication layout than a generic SaaS dashboard.
-- Restyled `frontend/components/DemoSection.tsx` so the live prediction demo remains the functional core of the page while visually matching the new editorial system.
-- Constraint note: no Stitch MCP integration was available in the current tool environment, so the redesign was implemented directly in code as an original Heritage-inspired interpretation rather than by importing an external design system.
-- Validation pending after this visual pass: rerun frontend diagnostics and a production Next.js build.
-
 - Completed the reduced-budget clean benchmark run locally with `scripts/run_clean_benchmark.py --training-epochs 5 --tuning-epochs 3 --n-particles 2 --iters 1 --ensemble-size 2 --ensemble-epochs 5` and saved the regenerated outputs under `results/metrics/` and `models/`.
 - Regenerated `results/metrics/holdout_results.csv` and `results/metrics/full_comparison_final.csv` with the full 9-model schema for each dataset, giving 27 data rows per file across China, COCOMO-81, and Desharnais.
 - Regenerated MLP artifacts alongside the existing CNN outputs, including `models/mlp_baseline_china.h5`, `models/mlp_pso_china.h5`, `models/mlp_baseline_cocomo81.h5`, `models/mlp_pso_cocomo81.h5`, `models/mlp_baseline_desharnais.h5`, and `models/mlp_pso_desharnais.h5`.
@@ -358,154 +256,45 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Key observation: Classical baselines (RandomForest, XGBoost, LinearRegression) remain superior to CNN and CNN+PSO variants in both holdout and 5-fold evaluation under reduced training budgets.
 - Next step: Full-budget run of `notebooks/05_pso.ipynb` with production epochs/particles/iterations to see if increased PSO search intensity and longer neural training close the gap to classical baselines or improve CNN generalization.
 
-### 2026-05-01 - Leakage-safe baseline export script and pickle artifacts
+### 2026-05-01 - Performance check and initial input schema clarification
 
-- Added `scripts/save_baselines.py` as an end-to-end baseline export entry point that loads raw datasets, splits train/test, trains or reloads baseline models, evaluates RMSE and MAE, and saves `.pkl` artifacts.
-- Added `src/baseline_models.py` to centralize the shared `LinearRegression`, `RandomForest`, and `XGBoost` builder configuration and file names.
-- Added `build_feature_preprocessor()` to `src/preprocess.py` so tabular preprocessing now fits imputation, categorical encoding, and optional numeric scaling on the training split only.
-- Updated `src/cv_pipeline.py` to reuse the shared baseline builder module instead of keeping a duplicate baseline-model definition.
-- Saved baseline artifacts under dataset-specific subdirectories to preserve the requested file names without collisions across datasets: `models/china/{lr_model.pkl,rf_model.pkl,xgb_model.pkl}`, `models/cocomo81/{lr_model.pkl,rf_model.pkl,xgb_model.pkl}`, and `models/desharnais/{lr_model.pkl,rf_model.pkl,xgb_model.pkl}`.
-- Full export validation ran successfully in the configured virtual environment with exact holdout metrics from `scripts/save_baselines.py`:
-	- China: `LinearRegression` RMSE `1296.143319`, MAE `446.369674`; `RandomForest` RMSE `1604.754387`, MAE `384.539133`; `XGBoost` RMSE `1503.300169`, MAE `388.871586`.
-	- COCOMO-81: `LinearRegression` RMSE `1922.377594`, MAE `1461.029797`; `RandomForest` RMSE `430.002079`, MAE `246.143128`; `XGBoost` RMSE `620.308905`, MAE `297.070859`.
-	- Desharnais: `LinearRegression` RMSE `1943.914123`, MAE `1435.054687`; `RandomForest` RMSE `2294.399361`, MAE `1765.977451`; `XGBoost` RMSE `2245.187760`, MAE `1693.691995`.
-- Reload-path validation also passed: rerunning the script logic with `reuse_existing=True` for China returned `loaded` status for `LinearRegression`, `RandomForest`, and `XGBoost`.
+- Reviewed the current saved evaluation artifacts used for model comparison: `results/metrics/full_comparison_final.csv`, `results/metrics/holdout_results.csv`, and per-dataset baseline files under `results/metrics/`.
+- Verified current leaderboard from `results/metrics/full_comparison_final.csv` (5-fold means):
+	- China: best RMSE_mean is `RandomForest` at `1285.642680`; best R2_mean is also `RandomForest` at `0.961891`.
+	- COCOMO-81: best RMSE_mean is `XGBoost` at `953.789013`; best R2_mean is `RandomForest` at `0.520860`.
+	- Desharnais: best RMSE_mean is `RandomForest` at `3464.063673`; best R2_mean is `XGBoost` at `0.383139`.
+- Confirmed production inference path still uses saved sklearn baseline pipelines (`src/predictor.py`) and not CNN artifacts at runtime.
+- Confirmed current public intake starts with a universal brief (`backend/schemas/request_response.py`) and frontend form fields in `frontend/components/EstimationFlow.tsx`: screens/pages, data entities, duration, team size, team experience, PM experience, complexity, reliability, optional notes, target currency, plus dataset-specific follow-up fields.
+- Confirmed original dataset-native input schemas from raw data (via `src.data_loader.load_all_raw_datasets()` + `src.preprocess.identify_effort_column()`):
+	- cocomo81 target `actual`; features: `num, dev_mode, rely, data, cplx, time, stor, virt, turn, acap, aexp, pcap, vexp, lexp, modp, tool, sced, loc`.
+	- desharnais target `Effort`; features: `id, Project, TeamExp, ManagerExp, YearEnd, Length, Transactions, Entities, PointsNonAdjust, Adjustment, PointsAjust, Language`.
+	- china target `Effort`; features: `ID, AFP, Input, Output, Enquiry, File, Interface, Added, Changed, Deleted, PDR_AFP, PDR_UFP, NPDR_AFP, NPDU_UFP, Resource, Dev.Type, Duration, N_effort`.
+- Noted consistency risk to revisit: runtime RMSE constants in `src/config.py` (`MODEL_RMSE_SCORES`) do not match the currently saved baseline metric CSV values, which can affect reported `best_model` labels in prediction responses.
 
-### 2026-05-01 - Phase 2 baseline ensemble module for saved `.pkl` models
+### 2026-05-01 - Runtime RMSE config synced to saved baseline metrics
 
-- Extended `src/ensemble.py` without breaking the existing neural `ensemble_predict(...)` path used by `src/cv_pipeline.py`.
-- Added a baseline-model ensemble layer that loads the saved sklearn pipelines from dataset-specific model directories and supports both simple averaging and configurable weighted averaging.
-- Added `BaselineEnsemble`, `initialize_ensemble(...)`, `get_loaded_ensemble()`, and `predict_ensemble(input_features)` so FastAPI-style startup can load models once and request handlers can call a cached prediction function.
-- Added `load_baseline_models(...)`, `simple_average_predictions(...)`, `weighted_average_predictions(...)`, `compare_predictions(...)`, and `compare_loaded_predictions(...)` for reusable ensemble operations and debugging.
-- Fixed baseline prediction input handling so raw `np.ndarray` rows are reconstructed into pandas `DataFrame` objects using the saved pipeline feature names before prediction; this avoids the sklearn `ColumnTransformer` failure that occurs when named-column pipelines receive bare NumPy arrays.
-- Made TensorFlow import lazy inside the neural-only `ensemble_predict(...)` function so the baseline `.pkl` ensemble path no longer pulls TensorFlow into API startup or emits TF runtime warnings.
-- Validation: initialized the China baseline ensemble from `models/china` and predicted successfully from a raw NumPy feature row. Simple averaging returned `6886.097622022004`, with individual predictions `LinearRegression=7193.876004086845`, `RandomForest=7510.966666666666`, and `XGBoost=5953.4501953125`.
-- Validation: weighted averaging also passed using weights `{LinearRegression: 0.2, RandomForest: 0.3, XGBoost: 0.5}`, returning `6668.790298473619` for the same China sample row.
-- Final diagnostics: no editor errors remain in `src/ensemble.py` or `src/cv_pipeline.py` after the ensemble-module update.
+- Updated `src/config.py` so `MODEL_RMSE_SCORES` now matches `results/metrics/baseline_metrics.csv` exactly for all three datasets and three baseline models.
+- Applied exact RMSE values:
+	- China: `RandomForest=1636.3238338522758`, `XGBoost=1467.3213518914497`, `LinearRegression=53165.28424556006`
+	- COCOMO-81: `RandomForest=482.4925319563499`, `XGBoost=451.19558709684895`, `LinearRegression=395.08088778481056`
+	- Desharnais: `RandomForest=2363.717631202568`, `XGBoost=2548.4416951395297`, `LinearRegression=1997.9362501688217`
+- Impact: runtime `best_model` selection and derived inverse-RMSE ensemble weights are now aligned with the currently saved baseline evaluation artifact.
+- Validation: checked `src/config.py` diagnostics after edit; no errors reported.
 
-### 2026-05-01 - Production prediction service module for saved baseline pipelines
+### 2026-05-01 - Frontend estimation flow redesigned to simplified multi-step UX
 
-- Added `src/config.py` to centralize dataset model directories, RMSE scores for `RandomForest`, `XGBoost`, and `LinearRegression`, model-output keys, and default inverse-RMSE ensemble weights.
-- Added `src/predictor.py` as the FastAPI-ready prediction service layer for the saved sklearn pipeline artifacts.
-- Implemented lazy dataset-model caching through `PredictionService`, with `load_models()` for explicit startup warmup and `get_prediction_service()` / `load_prediction_service()` singleton helpers for API integration.
-- Implemented request-time conversion from raw input dictionaries to one-row pandas `DataFrame` payloads using the exact `feature_names_in_` schema embedded in the saved pipelines, so preprocessing remains inside the stored sklearn `Pipeline` objects and is never reapplied manually.
-- Implemented individual predictions for `RandomForest`, `XGBoost`, and `LinearRegression`, plus ensemble prediction through both simple averaging and weighted averaging.
-- Implemented automatic best-model selection from precomputed RMSE scores in `src/config.py`, returning the model name with the lowest configured RMSE for the selected dataset.
-- Implemented safe input handling: unknown dataset keys raise a controlled dataset error, non-dictionary input raises `InvalidInputError`, unexpected input fields are ignored, and missing expected fields are inserted as `np.nan` so the fitted imputers inside the saved pipelines can handle them safely.
-- Validation: warmed the full prediction service with `load_prediction_service()`, then predicted successfully for the China dataset from a raw sample dictionary. Returned output format matched the production contract with keys `rf_prediction`, `xgb_prediction`, `lr_prediction`, `ensemble_prediction`, and `best_model`.
-- Validation: China sample output with simple averaging was `{'rf_prediction': 7510.966666666666, 'xgb_prediction': 5953.4501953125, 'lr_prediction': 7193.876004086845, 'ensemble_prediction': 6886.097622022004, 'best_model': 'LinearRegression'}`.
-- Validation: China sample output with weighted averaging also succeeded using default inverse-RMSE weights, returning `ensemble_prediction = 6889.2255625265825`.
-- Validation: a China request with the `AFP` field omitted still produced a prediction successfully, confirming that the stored imputers handle missing columns once the service injects `np.nan` placeholders.
-- Validation: invalid non-dictionary input raised the expected controlled error `InvalidInputError: input_payload must be a dictionary-like object`.
-- Final diagnostics: no editor errors remain in `src/config.py` or `src/predictor.py` after the prediction-service update.
+- Replaced the previous dataset-heavy estimate UI with a minimal progressive flow in `frontend/components/EstimationFlow.tsx`.
+- Added reusable step components under `frontend/components/estimation/`:
+	- `Step1ProjectType.tsx` (3-card project type selection)
+	- `Step2CoreInputs.tsx` (three slider-based core inputs)
+	- `Step3AdvancedInputs.tsx` (toggleable advanced inputs grouped into technical/team factors)
+	- `InputCard.tsx`, `SliderInput.tsx`, `SelectInput.tsx`, and shared `types.ts`.
+- Implemented internal-only mapping from simplified advanced choices to cost-driver concepts (`RELY`, `DATA`, `TIME`, `TOOL`, team capability proxy) and dataset-specific follow-up payloads before calling `submitDirectEstimate(...)`.
+- Added a result section with "Estimated Effort" card and an "Explain Estimation" area containing an "Ask AI" trigger and Groq chatbot placeholder container.
+- Validation pending: frontend dependency install and Next.js build/type check were not yet executed at this logging point.
 
-### 2026-05-01 - Standalone predictor validation script
+### 2026-05-01 - Frontend flow validation pass after redesign
 
-- Added `test_predictor.py` at the repository root as a simple runnable validation script for the production prediction service in `src/predictor.py`.
-- The script initializes the service once with `load_prediction_service()`, builds a valid `cocomo81` sample input from the first row of `data/processed/cocomo81_processed.csv`, and then exercises the public `predict_cost(...)` API.
-- Covered scenarios: valid prediction, missing-field prediction with two fields removed, invalid dataset handling, invalid non-dictionary input handling, simple ensemble prediction, and weighted ensemble prediction with custom weights `{RandomForest: 0.5, XGBoost: 0.3, LinearRegression: 0.2}`.
-- Validation: ran `python test_predictor.py` in the configured virtual environment and all six scenario checks passed without the script crashing.
-- Observed `cocomo81` happy-path output: `rf_prediction=524.5173333333332`, `xgb_prediction=-273.9039001464844`, `lr_prediction=13267.811313421693`, `ensemble_prediction=4506.1415822028475`, `best_model='RandomForest'`.
-- Observed missing-field output after removing `num` and `dev_mode`: `rf_prediction=402.99833333333316`, `xgb_prediction=459.2120666503906`, `lr_prediction=13486.30684585142`, `ensemble_prediction=4782.839081945048`, `best_model='RandomForest'`.
-- Observed weighted-ensemble output with custom weights: `ensemble_prediction=2833.64975930706` while the individual model predictions remained unchanged from the happy-path run.
-- Validation also confirmed the expected controlled errors: `InvalidDatasetError` for `invalid_dataset` and `InvalidInputError` for a non-dictionary payload.
-
-### 2026-05-01 - FastAPI backend scaffold for production prediction service
-
-- Added a dedicated backend structure under `backend/` with `main.py`, route modules for `/predict`, `/health`, and `/datasets`, shared Pydantic request/response models, and backend constants in `backend/core/config.py`.
-- Implemented FastAPI startup using a lifespan context manager and warmed the production prediction service once per process through `load_prediction_service()`.
-- Added CORS middleware configured for development with all origins, methods, and headers allowed.
-- Mapped prediction-service errors to API responses: `InvalidDatasetError` returns HTTP 400, `InvalidInputError` returns HTTP 422, and uncaught exceptions return HTTP 500 with JSON error bodies.
-- Implemented the `/predict` response contract expected by the frontend, including `rf_prediction`, `xgb_prediction`, `lr_prediction`, `ensemble_prediction`, `best_model`, and the fixed insight template `Best model for this dataset is {best_model}`.
-- Updated `requirements.txt` to include `fastapi` and `uvicorn[standard]` so the backend can run in the project virtual environment with `uvicorn main:app --reload` from the `backend/` directory.
-- Validation: installed the new backend dependencies in the configured virtual environment, then exercised the app with FastAPI `TestClient` through the real lifespan path.
-- Validation results: `/health` returned HTTP 200 with `{"status": "ok"}`, `/datasets` returned the three supported datasets, invalid dataset requests returned HTTP 400, invalid-input requests returned HTTP 422, and CORS preflight responded successfully with the expected allow headers.
-- Positive-path validation also succeeded with a real `china` payload built from `data/processed/china_processed.csv`, returning HTTP 200 and the expected prediction fields with `best_model='LinearRegression'`.
-- Remaining integration step: wire the Next.js frontend to the new backend endpoints and decide whether to keep development-open CORS settings or narrow them for deployment.
-
-### 2026-05-01 - Phase 0 contract freeze for universal AI-first estimator
-
-- Added `PHASE0_CONTRACT_FREEZE.md` to lock the public and internal product contract before schema and orchestration rewrites.
-- Documented the frozen public concepts for the estimator flow: universal project brief, prediction mode label, estimated effort, derived INR base cost, display currency, assumptions, warnings, confidence, and schema version.
-- Documented internal-only concepts that must stay out of the public UI and API language: detected route, mapped feature vector, routing confidence/rationale, provider name, prompt profile, model adapter, and guardrail/runtime metadata.
-- Captured the Phase 0 request/response contract draft with stable field names that support both AI mode and model mode behind one public shape.
-- Captured a file-level cleanup plan for outdated wording and dataset/model exposure across backend contract files and frontend UI/copy touchpoints, including `backend/schemas/request_response.py`, `backend/routes/predict.py`, `backend/routes/meta.py`, `frontend/lib/api.ts`, and `frontend/components/DemoSection.tsx`.
-- Validation: contract-freeze artifact created and aligned with the implementation roadmap requirement that users never see dataset names in the public estimation flow.
-- Next step: execute Phase 1 by implementing the universal input schema in backend and frontend types while keeping the frozen naming and response shape.
-
-### 2026-05-01 - Phase 1 universal input schema and normalization layer
-
-- Implemented the Phase 1 universal public input models in `backend/schemas/request_response.py` with strict validation bounds and enums.
-- Added `ComplexityLevel` and `ReliabilityLevel` enums with allowed categorical values `low`, `medium`, and `high`.
-- Added `UniversalProjectBrief` fields and numeric bounds: `num_screens` (1-5000), `num_entities` (1-10000), `duration_months` (>0 to 120), `team_experience_years` (0-50), `pm_experience_years` (0-50), and `team_size` (1-1000).
-- Added request-level Phase 1 model `UniversalPredictionRequest` with schema version support and currency validation/normalization to uppercase 3-letter codes (default `INR`).
-- Added normalization output models and helper `normalize_universal_request(...)` so backend can validate and normalize universal payloads before later routing work.
-- Added a dedicated backend endpoint `POST /predict/universal/normalize` in `backend/routes/predict.py` that returns the normalized universal payload.
-- Updated `frontend/lib/api.ts` with matching shared Phase 1 types (`UniversalProjectBrief`, `UniversalPredictRequest`, `NormalizedUniversalPredictRequest`) using identical field names and categorical sets.
-- Added frontend API helper `normalizeUniversalPayload(...)` to call the new backend normalization endpoint.
-- Backward compatibility preserved for current demo runtime: legacy dataset-based `/predict` request/response types and methods remain unchanged during this phase.
-- Validation: editor diagnostics report no errors in `backend/schemas/request_response.py`, `backend/routes/predict.py`, and `frontend/lib/api.ts` after the Phase 1 changes.
-- Next step: Phase 2 routing and mapping modules to convert universal payloads into internal dataset-specific feature vectors.
-
-### 2026-05-01 - Implementation plan pivot to adaptive two-step intake flow
-
-- Rewrote `IMPLEMENTATION_PLAN.md` to explicitly follow the approved user journey: limited universal intake questions, hidden internal route prediction, adaptive follow-up inputs, and final prediction.
-- Updated plan wording to keep dataset names fully hidden in public UX while preserving internal route and mapping compatibility with China, COCOMO81, and Desharnais feature families.
-- Reorganized roadmap for easier implementation by splitting the adaptive flow into explicit phases: route prediction service, follow-up question pack system, mapper/final assembly, two-step public API consolidation, and adaptive frontend UX.
-- Added clearer execution guidance with completed foundations marked (Phase 0 and Phase 1) and an execution-friendly order for remaining phases.
-- Updated verification checklist to include adaptive-stage requirements (Stage 1 limit, Stage 2 adaptive rendering, hidden dataset identifiers in public responses, final prediction from merged inputs).
-- Validation: rewritten plan now directly matches the requested flow and remains compatible with AI-first delivery plus later model-mode integration.
-
-### 2026-05-01 - Phase 2 route prediction service implementation
-
-- Implemented `backend/services/router.py` with a deterministic `UniversalRouter` that scores all internal route families (`china`, `cocomo81`, `desharnais`) using weighted heuristics over Stage 1 universal fields.
-- Added route confidence scoring, top-signal rationale generation, and neutral follow-up pack mapping (`adaptive_pack_alpha`, `adaptive_pack_beta`, `adaptive_pack_gamma`) so public responses do not expose dataset names.
-- Extended `backend/schemas/request_response.py` with Phase 2 models:
-	- `InternalRoute`
-	- `RouteInferenceMetadata` (internal/admin metadata model)
-	- `IntakeInferenceResponse` (public-safe Stage 1 intake response)
-- Updated `backend/routes/predict.py` with new endpoint `POST /predict/intake`:
-	- Validates and normalizes universal payload.
-	- Infers hidden route and follow-up pack id.
-	- Returns public-safe response with `intake_id`, `follow_up_pack_id`, `intake_version`, and `next_step`.
-	- Caches internal route metadata in memory for future admin diagnostics.
-- Added `backend/services/__init__.py` to register the new services package cleanly.
-- Validation:
-	- Editor diagnostics show no errors in `backend/schemas/request_response.py`, `backend/services/router.py`, and `backend/routes/predict.py`.
-	- Runtime smoke test via FastAPI `TestClient` returned HTTP `200` for `POST /predict/intake` with response shape:
-		- `intake_id` generated UUID
-		- `follow_up_pack_id='adaptive_pack_gamma'`
-		- `intake_version=1`
-		- `next_step='collect_followup_inputs'`
-- Plan tracking updated: `IMPLEMENTATION_PLAN.md` now marks Phase 2 status as completed.
-
-### 2026-05-01 - Phase 3 and 4 implemented together (follow-up packs + mapper assembly)
-
-- Implemented Phase 3 question-pack system in `backend/services/followup_questions.py` with a versioned registry keyed by hidden internal routes and neutral public labels.
-- Added three adaptive follow-up packs:
-	- `adaptive_pack_alpha` (volume/change details)
-	- `adaptive_pack_beta` (implementation constraints and tooling)
-	- `adaptive_pack_gamma` (process/data complexity)
-- Added strict normalization and validation for Stage 2 answers (required fields, numeric bounds, select-option checks) via `normalize_followup_answers(...)`.
-- Extended `backend/schemas/request_response.py` with new Phase 3 and 4 models:
-	- `FollowUpInputType`, `FollowUpQuestionField`, `FollowUpQuestionPack`, `IntakeFollowUpResponse`
-	- `FinalAssemblyRequest`, `MappingDiagnostics`, `FinalAssemblyResponse`
-- Implemented Phase 4 mapper in `backend/services/mapper.py` as `UniversalMapper` with route-specific assembly functions for China, COCOMO81, and Desharnais-compatible internal vectors.
-- Added mapping confidence and rationale diagnostics in the assembled output and included unresolved optional field tracking.
-- Updated `backend/routes/predict.py` with new endpoints:
-	- `GET /predict/followup/{intake_id}` to return dynamic follow-up questions
-	- `POST /predict/final/assemble` to validate Stage 2 answers and assemble final mapped feature vector
-- Added in-memory cache of normalized Stage 1 intake payloads to support Phase 4 final assembly using the same intake context.
-- Added mapper tests in `backend/tests/test_mapper.py` covering key-field presence and diagnostics for all three internal routes.
-- Updated `frontend/lib/api.ts` with shared Phase 3 and 4 types and helper methods:
-	- `inferIntakeRoute(...)`
-	- `getFollowUpQuestions(...)`
-	- `assembleFinalInputs(...)`
-- Validation:
-	- Editor diagnostics report no errors in all touched backend and frontend files.
-	- End-to-end API smoke test passed for intake -> follow-up -> final assembly:
-		- `POST /predict/intake` returned HTTP `200`
-		- `GET /predict/followup/{intake_id}` returned pack `adaptive_pack_gamma`
-		- `POST /predict/final/assemble` returned HTTP `200` with `internal_route='desharnais'` and mapped features including `Adjustment`, `Length`, `ManagerExp`, and `PointsNonAdjust`.
-	- Mapper test run passed: `Ran 3 tests ... OK` and `FAILED 0`.
-- Plan tracking updated: `IMPLEMENTATION_PLAN.md` now marks Phase 3 and Phase 4 status as completed.
+- Installed requested icon package in the frontend workspace: `@phosphor-icons/react`.
+- Verified no editor diagnostics in all newly added estimation flow components.
+- Executed frontend production build command from terminal and confirmed success (`npm run build` exit code `0`).
