@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Brain, Calendar, ChartBar, ChartPieSlice, CurrencyInr, Function, Info, ShieldWarning, Users, UsersThree } from "@phosphor-icons/react";
+import { ArrowLeft, Brain, Calendar, ChartBar, ChartPieSlice, CurrencyInr, FloppyDisk, Function, Info, Printer, ShieldWarning, Users, UsersThree } from "@phosphor-icons/react";
 import ChatPanel from "./ChatPanel";
 import type { CostRange, DatasetKey, EstimationContext, ExplainabilityStep, FinalPredictionResponse, ModelPredictions, PhaseBreakdown, RiskFactor, RoleCostBreakdown } from "@/lib/api";
 
@@ -478,14 +478,10 @@ export default function ResultsPage() {
   // Loading animation state
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [currentTyped, setCurrentTyped] = useState("");
-
-  // Stored result
   const [stored, setStored] = useState<StoredEstimation | null>(null);
-
-  // Progress bar ref — animated via CSS linear transition
+  const [savedScenarios, setSavedScenarios] = useState<Array<{ name: string; date: string; result: FinalPredictionResponse }>>([]);
   const barRef = useRef<HTMLDivElement>(null);
 
-  // ── Read sessionStorage ───────────────────────────────────────────────────
   useEffect(() => {
     const raw = sessionStorage.getItem("estimation_result");
     if (!raw) {
@@ -493,7 +489,10 @@ export default function ResultsPage() {
       return;
     }
     try {
-      setStored(JSON.parse(raw) as StoredEstimation);
+      const data = JSON.parse(raw) as StoredEstimation;
+      setStored(data);
+      const scenarios = localStorage.getItem("software_cost_scenarios");
+      if (scenarios) setSavedScenarios(JSON.parse(scenarios));
     } catch {
       router.replace("/estimate");
     }
@@ -664,19 +663,48 @@ export default function ResultsPage() {
         </button>
 
         {/* Header */}
-        <header className="rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Estimation Complete
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-            Your project estimate is ready
-          </h1>
-          <div className="mt-3 flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {confidence}% confidence
-            </span>
-            <span className="text-xs text-muted">Based on historical project data</span>
+        <header className="rounded-2xl border border-line/60 bg-card p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              Estimation Complete
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+              Your project estimate is ready
+            </h1>
+            <div className="mt-3 flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {confidence}% confidence
+              </span>
+              <span className="text-xs text-muted">Based on historical project data</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 shrink-0 print:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                const name = prompt("Enter a name for this scenario (e.g. 'Native App with Senior Team'):");
+                if (name) {
+                  const newScenario = { name, date: new Date().toISOString(), result };
+                  const updated = [...savedScenarios, newScenario];
+                  setSavedScenarios(updated);
+                  localStorage.setItem("software_cost_scenarios", JSON.stringify(updated));
+                }
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-line bg-background px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted/10 shadow-sm"
+            >
+              <FloppyDisk size={16} />
+              Save Scenario
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm"
+            >
+              <Printer size={16} />
+              Export PDF
+            </button>
           </div>
         </header>
 
@@ -824,9 +852,76 @@ export default function ResultsPage() {
           />
         )}
 
+        {/* Saved Scenarios What-If Comparison */}
+        {savedScenarios.length > 0 && (
+          <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm print:hidden">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                <FloppyDisk size={20} weight="duotone" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Saved Scenarios</p>
+                <p className="text-xs text-muted">Compare this estimate against previously saved "What-If" scenarios.</p>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto rounded-xl border border-line/50">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-line/40 bg-background">
+                    <th className="px-4 py-3 text-left font-semibold text-muted">Scenario Name</th>
+                    <th className="px-4 py-3 text-right font-semibold text-muted">Saved On</th>
+                    <th className="px-4 py-3 text-right font-semibold text-muted">Total Effort</th>
+                    <th className="px-4 py-3 text-right font-semibold text-muted">Total Cost (INR)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Current */}
+                  <tr className="border-b border-line/30 bg-primary/5 font-semibold">
+                    <td className="px-4 py-3 text-foreground flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-primary" /> Current Estimate
+                    </td>
+                    <td className="px-4 py-3 text-right text-muted tabular-nums">Now</td>
+                    <td className="px-4 py-3 text-right text-foreground tabular-nums">{result.estimated_effort.effort_months.toFixed(1)} PM</td>
+                    <td className="px-4 py-3 text-right text-foreground tabular-nums">{formatINR(result.cost_breakdown.base_cost_inr)}</td>
+                  </tr>
+                  
+                  {/* Saved */}
+                  {savedScenarios.map((sc, idx) => (
+                    <tr key={idx} className="border-b border-line/30 last:border-b-0">
+                      <td className="px-4 py-3 text-foreground">{sc.name}</td>
+                      <td className="px-4 py-3 text-right text-muted tabular-nums">
+                        {new Date(sc.date).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-right text-foreground tabular-nums">
+                        {sc.result.estimated_effort.effort_months.toFixed(1)} PM
+                      </td>
+                      <td className="px-4 py-3 text-right text-foreground tabular-nums">
+                        {formatINR(sc.result.cost_breakdown.base_cost_inr)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+               <button
+                type="button"
+                onClick={() => {
+                  setSavedScenarios([]);
+                  localStorage.removeItem("software_cost_scenarios");
+                }}
+                className="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors"
+               >
+                 Clear all saved scenarios
+               </button>
+            </div>
+          </div>
+        )}
+
         {/* Warnings (if any) */}
         {result.warnings.length > 0 && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 print:hidden">
             {result.warnings[0]}
           </div>
         )}
