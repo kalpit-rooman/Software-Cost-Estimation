@@ -65,6 +65,10 @@ class ModelOrchestrator:
             ) from exc
 
         raw_prediction = float(ml_result["ensemble_prediction"])
+        raw_rf = float(ml_result.get("rf_prediction", raw_prediction))
+        raw_xgb = float(ml_result.get("xgb_prediction", raw_prediction))
+        raw_lr = float(ml_result.get("lr_prediction", raw_prediction))
+        best_model = str(ml_result.get("best_model", "ensemble"))
 
         # China and Desharnais datasets record effort in person-HOURS.
         # COCOMO-81 records effort directly in person-months.
@@ -73,14 +77,26 @@ class ModelOrchestrator:
         _HOUR_BASED_ROUTES = {"china", "desharnais"}
         if route in _HOUR_BASED_ROUTES:
             effort_months = raw_prediction / _HOURS_PER_MONTH
+            effort_rf = raw_rf / _HOURS_PER_MONTH
+            effort_xgb = raw_xgb / _HOURS_PER_MONTH
+            effort_lr = raw_lr / _HOURS_PER_MONTH
         else:
             effort_months = raw_prediction
+            effort_rf = raw_rf
+            effort_xgb = raw_xgb
+            effort_lr = raw_lr
 
         # Guard: EstimatedEffort schema caps at 600 person-months.
         _EFFORT_CAP = 600.0
         capped = effort_months > _EFFORT_CAP
         if capped:
             effort_months = _EFFORT_CAP
+
+        # Compute cost range from the spread of individual model predictions.
+        individual_efforts = [effort_rf, effort_xgb, effort_lr]
+        optimistic_effort = max(0.1, min(individual_efforts))
+        pessimistic_effort = max(individual_efforts) * 1.15  # 15% risk buffer
+        most_likely_effort = effort_months
 
         assumptions = [
             "Effort derived from an ensemble of calibrated ML models (CNN, MLP, baselines).",
@@ -103,4 +119,17 @@ class ModelOrchestrator:
             "confidence": mapping_confidence,
             "assumptions": assumptions,
             "warnings": warnings,
+            "model_predictions": {
+                "random_forest": round(effort_rf, 2),
+                "xgboost": round(effort_xgb, 2),
+                "linear_regression": round(effort_lr, 2),
+                "ensemble": round(effort_months, 2),
+                "best_model": best_model,
+            },
+            "cost_range": {
+                "optimistic_effort": round(optimistic_effort, 2),
+                "most_likely_effort": round(most_likely_effort, 2),
+                "pessimistic_effort": round(pessimistic_effort, 2),
+            },
         }
+

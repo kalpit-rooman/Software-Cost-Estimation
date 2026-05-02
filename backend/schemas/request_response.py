@@ -6,6 +6,18 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+def _normalize_currency_code(value: Any) -> str:
+    """Shared currency normalisation used by multiple request models."""
+    if value is None:
+        return "INR"
+    if not isinstance(value, str):
+        raise TypeError("target_currency must be a string")
+    normalized = value.strip().upper()
+    if len(normalized) != 3 or not normalized.isalpha():
+        raise ValueError("target_currency must be a 3-letter alphabetic currency code")
+    return normalized
+
+
 class ComplexityLevel(str, Enum):
     low = "low"
     medium = "medium"
@@ -50,14 +62,7 @@ class UniversalPredictionRequest(BaseModel):
     @field_validator("target_currency", mode="before")
     @classmethod
     def normalize_currency_code(cls, value: Any) -> str:
-        if value is None:
-            return "INR"
-        if not isinstance(value, str):
-            raise TypeError("target_currency must be a string")
-        normalized = value.strip().upper()
-        if len(normalized) != 3 or not normalized.isalpha():
-            raise ValueError("target_currency must be a 3-letter alphabetic currency code")
-        return normalized
+        return _normalize_currency_code(value)
 
 
 class NormalizedUniversalProjectBrief(BaseModel):
@@ -221,6 +226,27 @@ class CostBreakdown(BaseModel):
     exchange_rate: float
 
 
+class ModelPredictions(BaseModel):
+    """Individual model predictions for transparency."""
+
+    random_forest: float
+    xgboost: float
+    linear_regression: float
+    ensemble: float
+    best_model: str
+
+
+class CostRange(BaseModel):
+    """Optimistic / most-likely / pessimistic cost envelope."""
+
+    optimistic_cost_inr: float
+    most_likely_cost_inr: float
+    pessimistic_cost_inr: float
+    optimistic_effort: float
+    most_likely_effort: float
+    pessimistic_effort: float
+
+
 class FinalPredictionResponse(BaseModel):
     """Public response for POST /predict/final."""
 
@@ -230,6 +256,8 @@ class FinalPredictionResponse(BaseModel):
     prediction_confidence: float = Field(..., ge=0.0, le=1.0)
     assumptions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    model_predictions: ModelPredictions | None = None
+    cost_range: CostRange | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -269,18 +297,12 @@ class FinalPredictionRequest(BaseModel):
     follow_up_answers: dict[str, Any] = Field(default_factory=dict)
     target_currency: str = Field(default="INR", min_length=3, max_length=3)
     profile_id: str | None = Field(default=None)  # prompt profile override
+    monthly_rate_inr: float | None = Field(default=None, ge=10000, le=5000000)
 
     @field_validator("target_currency", mode="before")
     @classmethod
     def normalize_currency(cls, value: Any) -> str:
-        if value is None:
-            return "INR"
-        if not isinstance(value, str):
-            raise TypeError("target_currency must be a string")
-        normalized = value.strip().upper()
-        if len(normalized) != 3 or not normalized.isalpha():
-            raise ValueError("target_currency must be a 3-letter alphabetic currency code")
-        return normalized
+        return _normalize_currency_code(value)
 
 
 class PredictionRequest(BaseModel):
@@ -321,18 +343,12 @@ class DirectEstimateRequest(BaseModel):
     project_brief: UniversalProjectBrief
     follow_up_answers: dict[str, Any] = Field(default_factory=dict)
     target_currency: str = Field(default="INR", min_length=3, max_length=3)
+    monthly_rate_inr: float | None = Field(default=None, ge=10000, le=5000000)
 
     @field_validator("target_currency", mode="before")
     @classmethod
     def normalize_currency(cls, value: Any) -> str:
-        if value is None:
-            return "INR"
-        if not isinstance(value, str):
-            raise TypeError("target_currency must be a string")
-        normalized = value.strip().upper()
-        if len(normalized) != 3 or not normalized.isalpha():
-            raise ValueError("target_currency must be a 3-letter alphabetic currency code")
-        return normalized
+        return _normalize_currency_code(value)
 
 
 # ---------------------------------------------------------------------------

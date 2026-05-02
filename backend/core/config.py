@@ -39,6 +39,9 @@ AI_PROFILE: str = os.getenv("AI_PROFILE", "balanced")
 # Blended monthly rate per person in INR.  Admin can override via env var.
 DEFAULT_MONTHLY_RATE_INR: float = float(os.getenv("DEFAULT_MONTHLY_RATE_INR", "150000"))
 
+# Live exchange-rate API key (exchangerate-api.com free tier)
+EXCHANGE_RATE_API_KEY: str = os.getenv("EXCHANGE_RATE_API_KEY", "")
+
 # ---------------------------------------------------------------------------
 # Intake cache settings (Phase 10)
 # ---------------------------------------------------------------------------

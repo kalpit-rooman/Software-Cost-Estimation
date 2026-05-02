@@ -62,6 +62,23 @@ export type CostBreakdown = {
   exchange_rate: number;
 };
 
+export type ModelPredictions = {
+  random_forest: number;
+  xgboost: number;
+  linear_regression: number;
+  ensemble: number;
+  best_model: string;
+};
+
+export type CostRange = {
+  optimistic_cost_inr: number;
+  most_likely_cost_inr: number;
+  pessimistic_cost_inr: number;
+  optimistic_effort: number;
+  most_likely_effort: number;
+  pessimistic_effort: number;
+};
+
 export type FinalPredictionResponse = {
   intake_id: string;
   estimated_effort: EstimatedEffort;
@@ -69,6 +86,8 @@ export type FinalPredictionResponse = {
   prediction_confidence: number;
   assumptions: string[];
   warnings: string[];
+  model_predictions: ModelPredictions | null;
+  cost_range: CostRange | null;
 };
 
 export type FollowUpInputType = "integer" | "number" | "select" | "text" | "boolean";
@@ -284,6 +303,7 @@ export type DirectEstimatePayload = {
   project_brief: UniversalProjectBrief;
   follow_up_answers: Record<string, string | number | boolean>;
   target_currency?: string;
+  monthly_rate_inr?: number;
 };
 
 export async function submitDirectEstimate(

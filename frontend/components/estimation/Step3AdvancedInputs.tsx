@@ -1,8 +1,9 @@
 "use client";
 
-import { Clock, Database, Shield, Users, Wrench } from "@phosphor-icons/react";
+import { Clock, CurrencyInr, Database, Shield, Users, Wrench } from "@phosphor-icons/react";
 
 import SelectInput from "@/components/estimation/SelectInput";
+import SliderInput from "@/components/estimation/SliderInput";
 import type { AdvancedInputs } from "@/components/estimation/types";
 
 type Step3AdvancedInputsProps = {
@@ -108,6 +109,25 @@ export default function Step3AdvancedInputs({
                   { value: "tight", label: "Tight" },
                 ]}
                 icon={Clock}
+              />
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">Budget</h3>
+            <div className="space-y-3">
+              <SliderInput
+                label="Monthly Salary per Developer"
+                helperText="Blended monthly CTC including benefits and overhead."
+                min={30000}
+                max={500000}
+                step={10000}
+                value={values.monthlySalary}
+                onChange={(monthlySalary) => onChange({ ...values, monthlySalary })}
+                icon={CurrencyInr}
+                formatValue={(v) =>
+                  `₹${new Intl.NumberFormat("en-IN").format(v)}/mo`
+                }
               />
             </div>
           </section>

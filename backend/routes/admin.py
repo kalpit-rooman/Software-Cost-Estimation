@@ -139,7 +139,12 @@ def patch_runtime_state(
 )
 def get_diagnostics(_: None = Depends(require_admin_key)) -> AdminDiagnosticsResponse:
     """Return live status alongside current runtime configuration."""
-    from src.predictor import _PREDICTION_SERVICE  # noqa: PLC0415  (local import to avoid circular dep)
+    model_loaded = False
+    try:
+        from src.predictor import _PREDICTION_SERVICE  # noqa: PLC0415
+        model_loaded = _PREDICTION_SERVICE is not None
+    except Exception:
+        pass
     s = get_state()
     return AdminDiagnosticsResponse(
         status="ok",
@@ -148,5 +153,5 @@ def get_diagnostics(_: None = Depends(require_admin_key)) -> AdminDiagnosticsRes
         ai_profile=s.ai_profile,
         monthly_rate_inr=s.monthly_rate_inr,
         default_currency=s.default_currency,
-        model_service_loaded=_PREDICTION_SERVICE is not None,
+        model_service_loaded=model_loaded,
     )

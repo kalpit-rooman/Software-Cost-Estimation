@@ -15,6 +15,7 @@ from services.model_orchestrator import ModelOrchestrator
 from services.state_manager import get_state
 from schemas.request_response import (
     CostBreakdown,
+    CostRange,
     DirectEstimateRequest,
     EstimatedEffort,
     FinalAssemblyRequest,
@@ -22,6 +23,7 @@ from schemas.request_response import (
     FinalPredictionRequest,
     FinalPredictionResponse,
     IntakeFollowUpResponse,
+    ModelPredictions,
     NormalizedUniversalProjectBrief,
     PublicIntakeResponse,
     RouteInferenceMetadata,
@@ -50,6 +52,81 @@ def get_intake_context(intake_id: str) -> tuple[RouteInferenceMetadata, Normaliz
     except KeyError:
         raise HTTPException(status_code=404, detail="intake_id not found or expired")
     return metadata, payload
+
+
+# ---------------------------------------------------------------------------
+# Shared cost derivation helper (eliminates duplication)
+# ---------------------------------------------------------------------------
+
+def _build_prediction_response(
+    *,
+    intake_id: str,
+    effort_months: float,
+    confidence: float,
+    assumptions: list[str],
+    warnings: list[str],
+    prediction_mode: str,
+    target_currency: str,
+    original_currency: str,
+    monthly_rate_inr_override: float | None = None,
+    model_predictions_data: dict | None = None,
+    cost_range_data: dict | None = None,
+) -> FinalPredictionResponse:
+    """Build the complete FinalPredictionResponse with cost derivation."""
+    monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+    base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
+    try:
+        display_cost, exchange_rate = convert_from_inr(base_cost_inr, target_currency)
+    except ValueError:
+        # Unsupported currency – fall back to INR.
+        target_currency = "INR"
+        display_cost = base_cost_inr
+        exchange_rate = 1.0
+        warnings.append(
+            f"Requested currency '{original_currency}' is not supported. Showing INR."
+        )
+
+    estimated_effort = EstimatedEffort(
+        effort_months=round(effort_months, 2),
+        confidence=round(confidence, 4),
+        assumptions=assumptions,
+        warnings=warnings,
+        prediction_mode=prediction_mode,
+    )
+    cost_breakdown = CostBreakdown(
+        effort_months=round(effort_months, 2),
+        monthly_rate_inr=monthly_rate_inr,
+        base_cost_inr=base_cost_inr,
+        target_currency=target_currency,
+        display_cost=display_cost,
+        exchange_rate=exchange_rate,
+    )
+
+    # Build model predictions and cost range if available (model mode only).
+    model_predictions_obj = None
+    cost_range_obj = None
+    if model_predictions_data:
+        model_predictions_obj = ModelPredictions(**model_predictions_data)
+    if cost_range_data:
+        cost_range_obj = CostRange(
+            optimistic_cost_inr=round(cost_range_data["optimistic_effort"] * monthly_rate_inr, 2),
+            most_likely_cost_inr=round(cost_range_data["most_likely_effort"] * monthly_rate_inr, 2),
+            pessimistic_cost_inr=round(cost_range_data["pessimistic_effort"] * monthly_rate_inr, 2),
+            optimistic_effort=cost_range_data["optimistic_effort"],
+            most_likely_effort=cost_range_data["most_likely_effort"],
+            pessimistic_effort=cost_range_data["pessimistic_effort"],
+        )
+
+    return FinalPredictionResponse(
+        intake_id=intake_id,
+        estimated_effort=estimated_effort,
+        cost_breakdown=cost_breakdown,
+        prediction_confidence=round(confidence, 4),
+        assumptions=assumptions,
+        warnings=warnings,
+        model_predictions=model_predictions_obj,
+        cost_range=cost_range_obj,
+    )
 
 
 @router.post(
@@ -231,43 +308,18 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
         warnings = result["warnings"]
         prediction_mode = "model"
 
-    # --- Cost derivation (rate from runtime state) ---
-    monthly_rate_inr = get_state().monthly_rate_inr
-    base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
-    target_currency = payload.target_currency
-    try:
-        display_cost, exchange_rate = convert_from_inr(base_cost_inr, target_currency)
-    except ValueError:
-        # Unsupported currency – fall back to INR.
-        target_currency = "INR"
-        display_cost = base_cost_inr
-        exchange_rate = 1.0
-        warnings.append(
-            f"Requested currency '{payload.target_currency}' is not supported. Showing INR."
-        )
-
-    estimated_effort = EstimatedEffort(
-        effort_months=round(effort_months, 2),
-        confidence=round(confidence, 4),
+    return _build_prediction_response(
+        intake_id=payload.intake_id,
+        effort_months=effort_months,
+        confidence=confidence,
         assumptions=assumptions,
         warnings=warnings,
         prediction_mode=prediction_mode,
-    )
-    cost_breakdown = CostBreakdown(
-        effort_months=round(effort_months, 2),
-        monthly_rate_inr=monthly_rate_inr,
-        base_cost_inr=base_cost_inr,
-        target_currency=target_currency,
-        display_cost=display_cost,
-        exchange_rate=exchange_rate,
-    )
-    return FinalPredictionResponse(
-        intake_id=payload.intake_id,
-        estimated_effort=estimated_effort,
-        cost_breakdown=cost_breakdown,
-        prediction_confidence=round(confidence, 4),
-        assumptions=assumptions,
-        warnings=warnings,
+        target_currency=payload.target_currency,
+        original_currency=payload.target_currency,
+        monthly_rate_inr_override=payload.monthly_rate_inr,
+        model_predictions_data=result.get("model_predictions") if prediction_mode == "model" else None,
+        cost_range_data=result.get("cost_range") if prediction_mode == "model" else None,
     )
 
 
@@ -336,47 +388,18 @@ def predict_direct(payload: DirectEstimateRequest) -> FinalPredictionResponse:
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    effort_months: float = result["effort_months"]
-    confidence: float = result["confidence"]
-    assumptions: list[str] = result["assumptions"]
-    warnings: list[str] = result["warnings"]
-
-    # --- Cost derivation ---
-    monthly_rate_inr = get_state().monthly_rate_inr
-    base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
-    target_currency = payload.target_currency
-    try:
-        display_cost, exchange_rate = convert_from_inr(base_cost_inr, target_currency)
-    except ValueError:
-        target_currency = "INR"
-        display_cost = base_cost_inr
-        exchange_rate = 1.0
-        warnings.append(
-            f"Requested currency '{payload.target_currency}' is not supported. Showing INR."
-        )
-
-    estimated_effort = EstimatedEffort(
-        effort_months=round(effort_months, 2),
-        confidence=round(confidence, 4),
-        assumptions=assumptions,
-        warnings=warnings,
-        prediction_mode="model",
-    )
-    cost_breakdown = CostBreakdown(
-        effort_months=round(effort_months, 2),
-        monthly_rate_inr=monthly_rate_inr,
-        base_cost_inr=base_cost_inr,
-        target_currency=target_currency,
-        display_cost=display_cost,
-        exchange_rate=exchange_rate,
-    )
-    return FinalPredictionResponse(
+    return _build_prediction_response(
         intake_id=f"direct-{route.value}",
-        estimated_effort=estimated_effort,
-        cost_breakdown=cost_breakdown,
-        prediction_confidence=round(confidence, 4),
-        assumptions=assumptions,
-        warnings=warnings,
+        effort_months=result["effort_months"],
+        confidence=result["confidence"],
+        assumptions=result["assumptions"],
+        warnings=result["warnings"],
+        prediction_mode="model",
+        target_currency=payload.target_currency,
+        original_currency=payload.target_currency,
+        monthly_rate_inr_override=payload.monthly_rate_inr,
+        model_predictions_data=result.get("model_predictions"),
+        cost_range_data=result.get("cost_range"),
     )
 
 

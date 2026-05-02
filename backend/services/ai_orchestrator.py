@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import core.config as cfg
@@ -16,6 +17,23 @@ from services.prompts.profiles import get_profile, PromptProfile
 
 _COMPLEXITY_MAP = {"low": "Low", "medium": "Medium", "high": "High"}
 _RELIABILITY_MAP = {"low": "Low (best-effort)", "medium": "Medium (standard)", "high": "High (mission-critical)"}
+
+# Characters / patterns stripped from user-supplied text before prompt injection.
+_INJECTION_PATTERN = re.compile(
+    r"(ignore\s+(all\s+)?(previous|above|prior)\s+instructions"
+    r"|you\s+are\s+now"
+    r"|system\s*:\s*"
+    r"|<\s*/?\s*system\s*>"
+    r"|```\s*(system|prompt))",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_user_text(text: str) -> str:
+    """Strip known prompt-injection patterns from user-supplied text."""
+    cleaned = _INJECTION_PATTERN.sub("[filtered]", text)
+    # Truncate to a safe length
+    return cleaned[:2000]
 
 
 def _build_user_prompt(
@@ -42,7 +60,8 @@ def _build_user_prompt(
 
     notes = brief.get("project_notes")
     if notes:
-        lines.append(f"- Additional context: {notes}")
+        sanitized_notes = _sanitize_user_text(str(notes))
+        lines.append(f"- Additional context: {sanitized_notes}")
 
     if follow_up_answers:
         lines.append("")
@@ -50,7 +69,8 @@ def _build_user_prompt(
         lines.append("")
         for key, value in follow_up_answers.items():
             readable_key = key.replace("_", " ").title()
-            lines.append(f"- {readable_key}: {value}")
+            sanitized_value = _sanitize_user_text(str(value))
+            lines.append(f"- {readable_key}: {sanitized_value}")
 
     lines.append("")
     lines.append(

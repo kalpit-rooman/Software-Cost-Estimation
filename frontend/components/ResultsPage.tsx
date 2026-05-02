@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Brain, Calendar, CurrencyInr, Info, UsersThree } from "@phosphor-icons/react";
+import { ArrowLeft, Brain, Calendar, ChartBar, CurrencyInr, Info, UsersThree } from "@phosphor-icons/react";
 import ChatPanel from "./ChatPanel";
-import type { DatasetKey, EstimationContext, FinalPredictionResponse } from "@/lib/api";
+import type { CostRange, DatasetKey, EstimationContext, FinalPredictionResponse, ModelPredictions } from "@/lib/api";
 
 // ── Loading animation config ──────────────────────────────────────────────────
 
@@ -78,6 +78,157 @@ type StoredEstimation = {
   result: FinalPredictionResponse;
   dataset: DatasetKey;
 };
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function CostRangeCard({ costRange }: { costRange: CostRange }) {
+  const opt = costRange.optimistic_cost_inr;
+  const likely = costRange.most_likely_cost_inr;
+  const pess = costRange.pessimistic_cost_inr;
+  const total = pess - opt || 1;
+  const likelyPct = Math.max(2, Math.min(98, ((likely - opt) / total) * 100));
+
+  return (
+    <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
+      <div className="flex items-start gap-4">
+        <span className="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+          <ChartBar size={26} weight="duotone" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Cost Confidence Range
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Based on the spread across Random Forest, XGBoost, and Linear Regression models
+          </p>
+
+          {/* Range bar */}
+          <div className="relative mt-5 mb-8">
+            <div className="h-3 w-full rounded-full bg-gradient-to-r from-emerald-200 via-amber-200 to-rose-200" />
+
+            {/* Optimistic marker */}
+            <div className="absolute top-0 flex flex-col items-center" style={{ left: "0%" }}>
+              <div className="h-3 w-0.5 bg-emerald-600" />
+              <div className="mt-1.5 whitespace-nowrap text-center">
+                <p className="text-[10px] font-semibold text-emerald-700">Optimistic</p>
+                <p className="text-xs font-semibold text-foreground">{formatINR(opt)}</p>
+                <p className="text-[10px] text-muted">{costRange.optimistic_effort} PM</p>
+              </div>
+            </div>
+
+            {/* Most likely marker */}
+            <div className="absolute top-0 flex flex-col items-center -translate-x-1/2" style={{ left: `${likelyPct}%` }}>
+              <div className="h-5 w-1 rounded-full bg-foreground -mt-1" />
+              <div className="mt-1.5 whitespace-nowrap text-center">
+                <p className="text-[10px] font-semibold text-amber-700">Most Likely</p>
+                <p className="text-sm font-bold text-foreground">{formatINR(likely)}</p>
+                <p className="text-[10px] text-muted">{costRange.most_likely_effort} PM</p>
+              </div>
+            </div>
+
+            {/* Pessimistic marker */}
+            <div className="absolute top-0 flex flex-col items-center" style={{ right: "0%" }}>
+              <div className="h-3 w-0.5 bg-rose-600" />
+              <div className="mt-1.5 whitespace-nowrap text-center">
+                <p className="text-[10px] font-semibold text-rose-700">Pessimistic</p>
+                <p className="text-xs font-semibold text-foreground">{formatINR(pess)}</p>
+                <p className="text-[10px] text-muted">{costRange.pessimistic_effort} PM</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModelComparisonCard({
+  predictions,
+  monthlyRate,
+}: {
+  predictions: ModelPredictions;
+  monthlyRate: number;
+}) {
+  const models = [
+    { key: "random_forest", label: "Random Forest", effort: predictions.random_forest },
+    { key: "xgboost", label: "XGBoost", effort: predictions.xgboost },
+    { key: "linear_regression", label: "Linear Regression", effort: predictions.linear_regression },
+    { key: "ensemble", label: "Ensemble (used)", effort: predictions.ensemble },
+  ];
+
+  return (
+    <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+          <ChartBar size={20} weight="duotone" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Model Comparison</p>
+          <p className="text-xs text-muted">
+            Ensemble combines all models using inverse-RMSE weighting
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-line/50">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line/40 bg-background">
+              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Model
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Effort (PM)
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Cost (INR)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {models.map((model) => {
+              const isBest = model.key === predictions.best_model.toLowerCase().replace(/\s+/g, "_")
+                || (model.key === "random_forest" && predictions.best_model === "RandomForest")
+                || (model.key === "xgboost" && predictions.best_model === "XGBoost")
+                || (model.key === "linear_regression" && predictions.best_model === "LinearRegression");
+              const isEnsemble = model.key === "ensemble";
+
+              return (
+                <tr
+                  key={model.key}
+                  className={`border-b border-line/30 last:border-b-0 ${
+                    isEnsemble
+                      ? "bg-primary/5 font-semibold"
+                      : isBest
+                        ? "bg-emerald-50/50"
+                        : ""
+                  }`}
+                >
+                  <td className="px-4 py-2.5 text-foreground">
+                    <span className="flex items-center gap-2">
+                      {model.label}
+                      {isBest && !isEnsemble && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          Best
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
+                    {model.effort.toFixed(1)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
+                    {formatINR(model.effort * monthlyRate)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -402,6 +553,19 @@ export default function ResultsPage() {
             </div>
           </div>
         </div>
+
+        {/* Cost Range Visualization */}
+        {result.cost_range && (
+          <CostRangeCard costRange={result.cost_range} />
+        )}
+
+        {/* Model Comparison Table */}
+        {result.model_predictions && (
+          <ModelComparisonCard
+            predictions={result.model_predictions}
+            monthlyRate={monthlyRate}
+          />
+        )}
 
         {/* Warnings (if any) */}
         {result.warnings.length > 0 && (

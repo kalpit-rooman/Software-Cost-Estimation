@@ -25,4 +25,5 @@ export type AdvancedInputs = {
   teamFamiliarity: TeamFamiliarityOption;
   timeConstraint: TimeConstraintOption;
   toolingMaturity: ToolingMaturityOption;
+  monthlySalary: number;
 };

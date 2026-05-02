@@ -1,14 +1,25 @@
 from __future__ import annotations
 
+import logging
+import time
+from threading import Lock
+
+import httpx
+
+import core.config as cfg
+
 # ---------------------------------------------------------------------------
-# Currency Converter – Phase 6
+# Currency Converter – Phase 6 (upgraded with live rates)
 # ---------------------------------------------------------------------------
-# Static exchange-rate table (INR as base currency).
-# Rates are approximate and intended for display purposes only.
-# Swap out _RATES_FROM_INR entries or add a live-rate fetcher in Phase 9+.
+# Fetches live exchange rates from ExchangeRate-API when a key is configured.
+# Falls back to static rates if the API is unavailable or key is missing.
 # ---------------------------------------------------------------------------
 
-_RATES_FROM_INR: dict[str, float] = {
+logger = logging.getLogger(__name__)
+
+# Static fallback rates (INR as base currency).
+# Used when EXCHANGE_RATE_API_KEY is absent or API call fails.
+_STATIC_RATES_FROM_INR: dict[str, float] = {
     "INR": 1.0,
     "USD": 0.012,
     "EUR": 0.011,
@@ -29,21 +40,94 @@ _RATES_FROM_INR: dict[str, float] = {
     "ZAR": 0.22,
 }
 
-SUPPORTED_CURRENCIES: list[str] = sorted(_RATES_FROM_INR.keys())
+# ---------------------------------------------------------------------------
+# Live rate cache
+# ---------------------------------------------------------------------------
+_CACHE_TTL_SECONDS = 6 * 3600  # 6 hours
+_cache_lock = Lock()
+_cached_rates: dict[str, float] | None = None
+_cached_at: float = 0.0
+_using_live_rates: bool = False
+
+
+def _fetch_live_rates() -> dict[str, float] | None:
+    """Fetch live rates from ExchangeRate-API. Returns None on failure."""
+    api_key = cfg.EXCHANGE_RATE_API_KEY
+    if not api_key:
+        return None
+
+    url = f"https://v6.exchangerate-api.com/v6/{api_key}/latest/INR"
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(url)
+        if response.status_code != 200:
+            logger.warning("ExchangeRate-API returned HTTP %s", response.status_code)
+            return None
+        data = response.json()
+        if data.get("result") != "success":
+            logger.warning("ExchangeRate-API error: %s", data.get("error-type", "unknown"))
+            return None
+        rates = data.get("conversion_rates", {})
+        if not rates:
+            return None
+        # API returns rates FROM INR (e.g. 1 INR = 0.012 USD), which is what we need.
+        logger.info("Fetched live exchange rates for %d currencies.", len(rates))
+        return {k.upper(): float(v) for k, v in rates.items()}
+    except Exception as exc:
+        logger.warning("Failed to fetch live exchange rates: %s", exc)
+        return None
+
+
+def _get_rates() -> tuple[dict[str, float], bool]:
+    """Return (rates_dict, is_live). Uses cached live rates when available."""
+    global _cached_rates, _cached_at, _using_live_rates  # noqa: PLW0603
+
+    now = time.time()
+    with _cache_lock:
+        # Return cached live rates if still fresh
+        if _cached_rates is not None and (now - _cached_at) < _CACHE_TTL_SECONDS:
+            return _cached_rates, _using_live_rates
+
+    # Try to fetch fresh live rates
+    live = _fetch_live_rates()
+    with _cache_lock:
+        if live is not None:
+            _cached_rates = live
+            _cached_at = time.time()
+            _using_live_rates = True
+            return _cached_rates, True
+        # If we had cached rates that are now stale, keep using them
+        if _cached_rates is not None:
+            logger.info("Using stale cached rates (API refresh failed).")
+            return _cached_rates, True
+
+    # Ultimate fallback: static rates
+    return _STATIC_RATES_FROM_INR, False
+
+
+SUPPORTED_CURRENCIES: list[str] = sorted(_STATIC_RATES_FROM_INR.keys())
 
 
 def get_rate(target_currency: str) -> float:
     """
     Return the exchange rate from INR to ``target_currency``.
 
+    Uses live rates when available, falls back to static rates.
+
     Raises
     ------
     ValueError
-        If the currency code is not in the static rate table.
+        If the currency code is not supported.
     """
     code = target_currency.upper()
-    rate = _RATES_FROM_INR.get(code)
+    rates, is_live = _get_rates()
+    rate = rates.get(code)
     if rate is None:
+        # Live rates cover many currencies not in the static list
+        if is_live:
+            raise ValueError(
+                f"Currency '{code}' is not available in live rate data."
+            )
         raise ValueError(
             f"Currency '{code}' is not supported. "
             f"Supported currencies: {SUPPORTED_CURRENCIES}"

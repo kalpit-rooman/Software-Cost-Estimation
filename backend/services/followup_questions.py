@@ -199,9 +199,16 @@ def normalize_followup_answers(pack: FollowUpQuestionPack, answers: dict[str, ob
                 raise ValueError(f"{field.field_key} must be boolean")
             continue
 
+        # Text type — sanitize and validate length.
+        import re
         value = str(raw).strip()
+        # Strip HTML/script tags
+        value = re.sub(r"<[^>]+>", "", value)
+        if len(value) > 2000:
+            value = value[:2000]
         if field.required and not value:
             raise ValueError(f"{field.field_key} cannot be empty")
         normalized[field.field_key] = value
 
     return normalized, unresolved_fields
+

@@ -17,6 +17,7 @@ type SliderInputProps = {
   value: number;
   onChange: (value: number) => void;
   icon: ComponentType<IconProps>;
+  formatValue?: (value: number) => string;
 };
 
 export default function SliderInput({
@@ -28,6 +29,7 @@ export default function SliderInput({
   value,
   onChange,
   icon: Icon,
+  formatValue,
 }: SliderInputProps) {
   return (
     <div className="rounded-2xl border border-line/60 bg-card p-5 shadow-sm">
@@ -41,7 +43,7 @@ export default function SliderInput({
             <p className="text-xs text-muted">{helperText}</p>
           </div>
         </div>
-        <p className="rounded-lg bg-background px-2.5 py-1 text-xs font-semibold text-foreground">{value}</p>
+        <p className="rounded-lg bg-background px-2.5 py-1 text-xs font-semibold text-foreground">{formatValue ? formatValue(value) : value}</p>
       </div>
 
       <input

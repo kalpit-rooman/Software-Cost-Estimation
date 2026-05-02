@@ -38,8 +38,11 @@ class GeminiProvider(BaseAIProvider):
 
     def predict_effort(self, prompt: str, system_prompt: str) -> str:
         """Call the Gemini generateContent endpoint and return the text response."""
-        url = f"{_GEMINI_API_BASE}/{self._model}:generateContent?key={self._api_key}"
-        headers = {"Content-Type": "application/json"}
+        url = f"{_GEMINI_API_BASE}/{self._model}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self._api_key,
+        }
         payload = {
             "systemInstruction": {
                 "parts": [{"text": system_prompt}],

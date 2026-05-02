@@ -50,6 +50,7 @@ const INITIAL_ADVANCED: AdvancedInputs = {
   teamFamiliarity: "some_experience",
   timeConstraint: "moderate",
   toolingMaturity: "stable",
+  monthlySalary: 150000,
 };
 
 function asComplexityLabel(score: number): ComplexityLabel {
@@ -168,6 +169,7 @@ function buildPayload(
   return {
     dataset,
     target_currency: "INR",
+    monthly_rate_inr: advanced.monthlySalary,
     project_brief: {
       num_screens: clampNumber(Math.round(core.projectSize * 0.65), 1, 10000),
       num_entities: clampNumber(Math.round(core.projectSize * 0.48), 1, 10000),
