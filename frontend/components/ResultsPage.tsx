@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Brain, Calendar, ChartBar, CurrencyInr, Info, UsersThree } from "@phosphor-icons/react";
+import { ArrowLeft, Brain, Calendar, ChartBar, ChartPieSlice, CurrencyInr, Function, Info, ShieldWarning, Users, UsersThree } from "@phosphor-icons/react";
 import ChatPanel from "./ChatPanel";
-import type { CostRange, DatasetKey, EstimationContext, FinalPredictionResponse, ModelPredictions } from "@/lib/api";
+import type { CostRange, DatasetKey, EstimationContext, ExplainabilityStep, FinalPredictionResponse, ModelPredictions, PhaseBreakdown, RiskFactor, RoleCostBreakdown } from "@/lib/api";
 
 // ── Loading animation config ──────────────────────────────────────────────────
 
@@ -225,6 +225,243 @@ function ModelComparisonCard({
             })}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function RoleBreakdownCard({
+  roles,
+}: {
+  roles: RoleCostBreakdown[];
+}) {
+  const totalCost = roles.reduce((acc, r) => acc + r.cost_inr, 0);
+
+  return (
+    <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+          <Users size={20} weight="duotone" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Team Role Breakdown</p>
+          <p className="text-xs text-muted">
+            Cost distribution based on specified team composition
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-line/50">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line/40 bg-background">
+              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Role
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Allocation
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted hidden sm:table-cell">
+                Rate (mo)
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Cost
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map((role, idx) => (
+              <tr key={idx} className="border-b border-line/30 last:border-b-0">
+                <td className="px-4 py-2.5 text-foreground">{role.role_name}</td>
+                <td className="px-4 py-2.5 text-right text-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    {role.percentage}%
+                    <span className="text-muted text-xs">({role.effort_months.toFixed(1)} PM)</span>
+                  </span>
+                </td>
+                <td className="px-4 py-2.5 text-right text-muted tabular-nums hidden sm:table-cell">
+                  {formatINR(role.monthly_rate_inr)}
+                </td>
+                <td className="px-4 py-2.5 text-right text-foreground tabular-nums font-medium">
+                  {formatINR(role.cost_inr)}
+                </td>
+              </tr>
+            ))}
+            <tr className="bg-muted/5 font-semibold border-t-2 border-line/50">
+              <td colSpan={3} className="px-4 py-3 text-right">Total:</td>
+              <td className="px-4 py-3 text-right tabular-nums text-primary">{formatINR(totalCost)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PhaseBreakdownCard({ phases }: { phases: PhaseBreakdown[] }) {
+  const colors = ["bg-emerald-400", "bg-blue-400", "bg-indigo-400", "bg-violet-400", "bg-pink-400", "bg-rose-400"];
+
+  return (
+    <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-6">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+          <ChartPieSlice size={20} weight="duotone" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">SDLC Phase Breakdown</p>
+          <p className="text-xs text-muted">
+            Estimated effort and cost distribution across project lifecycle
+          </p>
+        </div>
+      </div>
+
+      {/* Stacked Bar Chart */}
+      <div className="mb-6 flex h-4 w-full overflow-hidden rounded-full">
+        {phases.map((phase, idx) => (
+          <div
+            key={idx}
+            style={{ width: `${phase.percentage}%` }}
+            className={`h-full ${colors[idx % colors.length]}`}
+            title={`${phase.phase_name}: ${phase.percentage}%`}
+          />
+        ))}
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-line/50">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line/40 bg-background">
+              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Phase
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Effort (PM)
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted hidden sm:table-cell">
+                %
+              </th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                Cost
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {phases.map((phase, idx) => (
+              <tr key={idx} className="border-b border-line/30 last:border-b-0">
+                <td className="px-4 py-2.5 text-foreground flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${colors[idx % colors.length]}`} />
+                  {phase.phase_name}
+                </td>
+                <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
+                  {phase.effort_months.toFixed(1)}
+                </td>
+                <td className="px-4 py-2.5 text-right text-muted tabular-nums hidden sm:table-cell">
+                  {phase.percentage}%
+                </td>
+                <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
+                  {formatINR(phase.cost_inr)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function RiskAssessmentCard({ risks }: { risks: RiskFactor[] }) {
+  return (
+    <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-6">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
+          <ShieldWarning size={20} weight="duotone" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Project Risk Assessment</p>
+          <p className="text-xs text-muted">
+            Identified risk factors and their potential financial impact
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {risks.map((risk, idx) => (
+          <div key={idx} className="rounded-xl border border-line/40 bg-background p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h4 className="text-sm font-bold text-foreground">{risk.risk_name}</h4>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                risk.impact_level === "High" ? "bg-rose-100 text-rose-700" :
+                risk.impact_level === "Medium" ? "bg-amber-100 text-amber-700" :
+                "bg-emerald-100 text-emerald-700"
+              }`}>
+                {risk.impact_level} Impact
+              </span>
+            </div>
+            <p className="text-xs text-muted mb-3 line-clamp-2" title={risk.mitigation}>
+              <span className="font-semibold">Mitigation:</span> {risk.mitigation}
+            </p>
+            <div className="flex items-center justify-between mt-auto border-t border-line/30 pt-2">
+              <span className="text-[10px] text-muted uppercase tracking-widest">Potential Cost</span>
+              <span className="text-sm font-bold text-foreground tabular-nums">
+                + {formatINR(risk.potential_cost_impact_inr)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExplainabilityWaterfallCard({ steps }: { steps: ExplainabilityStep[] }) {
+  const totalEffort = steps.reduce((sum, step) => sum + step.effort_change_months, 0);
+
+  return (
+    <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-6">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+          <Function size={20} weight="duotone" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Effort Explainability (Waterfall)</p>
+          <p className="text-xs text-muted">
+            Step-by-step breakdown of how the final effort was calculated
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3 relative before:absolute before:inset-y-4 before:left-4 before:w-0.5 before:bg-line/40">
+        {steps.map((step, idx) => (
+          <div key={idx} className="relative flex items-center gap-4 pl-10">
+            <div className={`absolute left-2.5 h-3 w-3 rounded-full border-2 border-background shadow-sm ${
+              step.is_base ? "bg-blue-500" : "bg-emerald-500"
+            }`} />
+            
+            <div className="flex-1 rounded-xl border border-line/40 bg-background p-3 flex justify-between items-center">
+              <div>
+                <p className="text-sm font-bold text-foreground">{step.step_name}</p>
+                <p className="text-xs text-muted">{step.description}</p>
+              </div>
+              <div className={`text-sm font-bold tabular-nums whitespace-nowrap pl-4 ${
+                step.is_base ? "text-foreground" : "text-emerald-600"
+              }`}>
+                {step.is_base ? "" : "+ "}{step.effort_change_months.toFixed(1)} PM
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Total line */}
+        <div className="relative flex items-center gap-4 pl-10 pt-2">
+           <div className="absolute left-2.5 h-3 w-3 rounded-full border-2 border-background bg-foreground shadow-sm" />
+           <div className="flex-1 rounded-xl border-2 border-line/80 bg-muted/5 p-3 flex justify-between items-center">
+              <p className="text-sm font-bold text-foreground uppercase tracking-widest">Final Effort</p>
+              <div className="text-lg font-black tabular-nums text-foreground">
+                {totalEffort.toFixed(1)} PM
+              </div>
+           </div>
+        </div>
       </div>
     </div>
   );
@@ -557,6 +794,26 @@ export default function ResultsPage() {
         {/* Cost Range Visualization */}
         {result.cost_range && (
           <CostRangeCard costRange={result.cost_range} />
+        )}
+
+        {/* Role Breakdown Table */}
+        {result.role_breakdown && (
+          <RoleBreakdownCard roles={result.role_breakdown} />
+        )}
+
+        {/* Phase Breakdown Table */}
+        {result.phase_breakdown && (
+          <PhaseBreakdownCard phases={result.phase_breakdown} />
+        )}
+
+        {/* Explainability Waterfall */}
+        {result.explainability_waterfall && (
+          <ExplainabilityWaterfallCard steps={result.explainability_waterfall} />
+        )}
+
+        {/* Risk Assessment */}
+        {result.risk_assessment && (
+          <RiskAssessmentCard risks={result.risk_assessment} />
         )}
 
         {/* Model Comparison Table */}

@@ -5,6 +5,14 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+class TechStack(str, Enum):
+    web = "web"
+    mobile_cross = "mobile_cross"
+    mobile_native = "mobile_native"
+    enterprise = "enterprise"
+    ai_ml = "ai_ml"
+    embedded = "embedded"
+
 
 def _normalize_currency_code(value: Any) -> str:
     """Shared currency normalisation used by multiple request models."""
@@ -226,6 +234,44 @@ class CostBreakdown(BaseModel):
     exchange_rate: float
 
 
+class TeamRole(BaseModel):
+    role_name: str
+    percentage: float = Field(..., ge=0, le=100)
+    monthly_rate_inr: float = Field(..., ge=10000, le=5000000)
+
+class TeamComposition(BaseModel):
+    roles: list[TeamRole] = Field(..., min_length=1, max_length=10)
+
+class RoleCostBreakdown(BaseModel):
+    role_name: str
+    percentage: float
+    monthly_rate_inr: float
+    effort_months: float
+    cost_inr: float
+
+
+class PhaseBreakdown(BaseModel):
+    phase_name: str
+    percentage: float
+    effort_months: float
+    cost_inr: float
+
+
+class RiskFactor(BaseModel):
+    risk_name: str
+    impact_level: str  # "High", "Medium", "Low"
+    probability: str   # "High", "Medium", "Low"
+    mitigation: str
+    potential_cost_impact_inr: float
+
+
+class ExplainabilityStep(BaseModel):
+    step_name: str
+    effort_change_months: float
+    is_base: bool = False
+    description: str
+
+
 class ModelPredictions(BaseModel):
     """Individual model predictions for transparency."""
 
@@ -258,6 +304,10 @@ class FinalPredictionResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     model_predictions: ModelPredictions | None = None
     cost_range: CostRange | None = None
+    role_breakdown: list[RoleCostBreakdown] | None = None
+    phase_breakdown: list[PhaseBreakdown] | None = None
+    risk_assessment: list[RiskFactor] | None = None
+    explainability_waterfall: list[ExplainabilityStep] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +348,8 @@ class FinalPredictionRequest(BaseModel):
     target_currency: str = Field(default="INR", min_length=3, max_length=3)
     profile_id: str | None = Field(default=None)  # prompt profile override
     monthly_rate_inr: float | None = Field(default=None, ge=10000, le=5000000)
+    team_composition: TeamComposition | None = None
+    tech_stack: TechStack = Field(default=TechStack.web)
 
     @field_validator("target_currency", mode="before")
     @classmethod
@@ -344,6 +396,8 @@ class DirectEstimateRequest(BaseModel):
     follow_up_answers: dict[str, Any] = Field(default_factory=dict)
     target_currency: str = Field(default="INR", min_length=3, max_length=3)
     monthly_rate_inr: float | None = Field(default=None, ge=10000, le=5000000)
+    team_composition: TeamComposition | None = None
+    tech_stack: TechStack = Field(default=TechStack.web)
 
     @field_validator("target_currency", mode="before")
     @classmethod

@@ -50,7 +50,16 @@ const INITIAL_ADVANCED: AdvancedInputs = {
   teamFamiliarity: "some_experience",
   timeConstraint: "moderate",
   toolingMaturity: "stable",
+  techStack: "web",
   monthlySalary: 150000,
+  useTeamComposition: false,
+  teamRoles: [
+    { id: "1", role_name: "Senior Developer", percentage: 20, monthly_rate_inr: 250000 },
+    { id: "2", role_name: "Mid Developer", percentage: 40, monthly_rate_inr: 150000 },
+    { id: "3", role_name: "Junior Developer", percentage: 20, monthly_rate_inr: 80000 },
+    { id: "4", role_name: "QA Engineer", percentage: 10, monthly_rate_inr: 100000 },
+    { id: "5", role_name: "Project Manager", percentage: 10, monthly_rate_inr: 200000 },
+  ],
 };
 
 function asComplexityLabel(score: number): ComplexityLabel {
@@ -169,7 +178,9 @@ function buildPayload(
   return {
     dataset,
     target_currency: "INR",
+    tech_stack: advanced.techStack,
     monthly_rate_inr: advanced.monthlySalary,
+    team_composition: advanced.useTeamComposition ? { roles: advanced.teamRoles } : undefined,
     project_brief: {
       num_screens: clampNumber(Math.round(core.projectSize * 0.65), 1, 10000),
       num_entities: clampNumber(Math.round(core.projectSize * 0.48), 1, 10000),

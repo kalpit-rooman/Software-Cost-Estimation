@@ -26,13 +26,19 @@ from schemas.request_response import (
     ModelPredictions,
     NormalizedUniversalProjectBrief,
     PublicIntakeResponse,
+    RoleCostBreakdown,
     RouteInferenceMetadata,
     NormalizedUniversalPredictionRequest,
     PredictionRequest,
     PredictionResponse,
+    TeamComposition,
+    TechStack,
     UniversalPredictionRequest,
     normalize_universal_request,
 )
+from services.phase_distributor import distribute_phases
+from services.risk_assessor import assess_risks
+from services.explainability import generate_waterfall
 from src.predictor import predict_cost
 
 router = APIRouter()
@@ -69,11 +75,27 @@ def _build_prediction_response(
     target_currency: str,
     original_currency: str,
     monthly_rate_inr_override: float | None = None,
+    team_composition: TeamComposition | None = None,
     model_predictions_data: dict | None = None,
     cost_range_data: dict | None = None,
+    phase_breakdown_data: list | None = None,
+    risk_assessment_data: list | None = None,
+    explainability_data: list | None = None,
 ) -> FinalPredictionResponse:
     """Build the complete FinalPredictionResponse with cost derivation."""
-    monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+    if team_composition and team_composition.roles:
+        # Calculate blended rate based on role percentages
+        total_pct = sum(role.percentage for role in team_composition.roles)
+        if total_pct <= 0:
+            monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+        else:
+            monthly_rate_inr = sum(
+                (role.percentage / total_pct) * role.monthly_rate_inr
+                for role in team_composition.roles
+            )
+    else:
+        monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+
     base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
     try:
         display_cost, exchange_rate = convert_from_inr(base_cost_inr, target_currency)
@@ -95,12 +117,30 @@ def _build_prediction_response(
     )
     cost_breakdown = CostBreakdown(
         effort_months=round(effort_months, 2),
-        monthly_rate_inr=monthly_rate_inr,
+        monthly_rate_inr=round(monthly_rate_inr, 2),
         base_cost_inr=base_cost_inr,
         target_currency=target_currency,
         display_cost=display_cost,
         exchange_rate=exchange_rate,
     )
+
+    role_breakdown = None
+    if team_composition and team_composition.roles:
+        total_pct = sum(role.percentage for role in team_composition.roles) or 100.0
+        role_breakdown = []
+        for role in team_composition.roles:
+            pct = role.percentage / total_pct
+            r_effort = effort_months * pct
+            r_cost = r_effort * role.monthly_rate_inr
+            role_breakdown.append(
+                RoleCostBreakdown(
+                    role_name=role.role_name,
+                    percentage=round(pct * 100, 2),
+                    monthly_rate_inr=role.monthly_rate_inr,
+                    effort_months=round(r_effort, 2),
+                    cost_inr=round(r_cost, 2),
+                )
+            )
 
     # Build model predictions and cost range if available (model mode only).
     model_predictions_obj = None
@@ -126,6 +166,10 @@ def _build_prediction_response(
         warnings=warnings,
         model_predictions=model_predictions_obj,
         cost_range=cost_range_obj,
+        role_breakdown=role_breakdown,
+        phase_breakdown=phase_breakdown_data,
+        risk_assessment=risk_assessment_data,
+        explainability_waterfall=explainability_data,
     )
 
 
@@ -308,9 +352,48 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
         warnings = result["warnings"]
         prediction_mode = "model"
 
+    # Apply Tech Stack Multiplier
+    stack_multipliers = {
+        TechStack.web: 1.0,
+        TechStack.mobile_cross: 1.15,
+        TechStack.mobile_native: 1.35,
+        TechStack.enterprise: 1.20,
+        TechStack.ai_ml: 1.40,
+        TechStack.embedded: 1.50,
+    }
+    multiplier = stack_multipliers.get(payload.tech_stack, 1.0)
+    final_effort_months = effort_months * multiplier
+    if multiplier != 1.0:
+        assumptions.append(f"Applied {multiplier}x effort multiplier for {payload.tech_stack.value} stack.")
+
+    blended_rate = payload.monthly_rate_inr or get_state().monthly_rate_inr
+
+    # Apply Phase Distributor
+    phase_breakdown = distribute_phases(
+        effort_months=final_effort_months,
+        monthly_rate_inr=blended_rate,
+        complexity=original_payload.project_brief.complexity,
+        reliability=original_payload.project_brief.reliability,
+    )
+
+    # Risk Assessment
+    risks = assess_risks(
+        complexity=original_payload.project_brief.complexity,
+        reliability=original_payload.project_brief.reliability,
+        base_effort=final_effort_months,
+        monthly_rate_inr=blended_rate,
+    )
+
+    # Explainability Waterfall
+    waterfall = generate_waterfall(
+        base_ml_effort=effort_months,
+        tech_stack=payload.tech_stack,
+        multiplier=multiplier
+    )
+
     return _build_prediction_response(
         intake_id=payload.intake_id,
-        effort_months=effort_months,
+        effort_months=final_effort_months,
         confidence=confidence,
         assumptions=assumptions,
         warnings=warnings,
@@ -318,8 +401,12 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
         target_currency=payload.target_currency,
         original_currency=payload.target_currency,
         monthly_rate_inr_override=payload.monthly_rate_inr,
+        team_composition=payload.team_composition,
         model_predictions_data=result.get("model_predictions") if prediction_mode == "model" else None,
         cost_range_data=result.get("cost_range") if prediction_mode == "model" else None,
+        phase_breakdown_data=phase_breakdown,
+        risk_assessment_data=risks,
+        explainability_data=waterfall,
     )
 
 
@@ -388,9 +475,49 @@ def predict_direct(payload: DirectEstimateRequest) -> FinalPredictionResponse:
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    # Apply Tech Stack Multiplier
+    stack_multipliers = {
+        TechStack.web: 1.0,
+        TechStack.mobile_cross: 1.15,
+        TechStack.mobile_native: 1.35,
+        TechStack.enterprise: 1.20,
+        TechStack.ai_ml: 1.40,
+        TechStack.embedded: 1.50,
+    }
+    multiplier = stack_multipliers.get(payload.tech_stack, 1.0)
+    base_effort = result["effort_months"]
+    final_effort_months = base_effort * multiplier
+    if multiplier != 1.0:
+        result["assumptions"].append(f"Applied {multiplier}x effort multiplier for {payload.tech_stack.value} stack.")
+
+    blended_rate = payload.monthly_rate_inr or get_state().monthly_rate_inr
+
+    # Apply Phase Distributor
+    phase_breakdown = distribute_phases(
+        effort_months=final_effort_months,
+        monthly_rate_inr=blended_rate,
+        complexity=payload.project_brief.complexity,
+        reliability=payload.project_brief.reliability,
+    )
+
+    # Risk Assessment
+    risks = assess_risks(
+        complexity=payload.project_brief.complexity,
+        reliability=payload.project_brief.reliability,
+        base_effort=final_effort_months,
+        monthly_rate_inr=blended_rate,
+    )
+
+    # Explainability Waterfall
+    waterfall = generate_waterfall(
+        base_ml_effort=base_effort,
+        tech_stack=payload.tech_stack,
+        multiplier=multiplier
+    )
+
     return _build_prediction_response(
         intake_id=f"direct-{route.value}",
-        effort_months=result["effort_months"],
+        effort_months=final_effort_months,
         confidence=result["confidence"],
         assumptions=result["assumptions"],
         warnings=result["warnings"],
@@ -398,8 +525,12 @@ def predict_direct(payload: DirectEstimateRequest) -> FinalPredictionResponse:
         target_currency=payload.target_currency,
         original_currency=payload.target_currency,
         monthly_rate_inr_override=payload.monthly_rate_inr,
+        team_composition=payload.team_composition,
         model_predictions_data=result.get("model_predictions"),
         cost_range_data=result.get("cost_range"),
+        phase_breakdown_data=phase_breakdown,
+        risk_assessment_data=risks,
+        explainability_data=waterfall,
     )
 
 

@@ -3,6 +3,8 @@ export type DatasetCode = "china" | "cocomo81" | "desharnais";
 export type ComplexityLevel = "low" | "medium" | "high";
 export type ReliabilityLevel = "low" | "medium" | "high";
 
+export type TechStack = "web" | "mobile_cross" | "mobile_native" | "enterprise" | "ai_ml" | "embedded";
+
 export type UniversalProjectBrief = {
   num_screens: number;
   num_entities: number;
@@ -62,6 +64,46 @@ export type CostBreakdown = {
   exchange_rate: number;
 };
 
+export type TeamRole = {
+  role_name: string;
+  percentage: number;
+  monthly_rate_inr: number;
+};
+
+export type TeamComposition = {
+  roles: TeamRole[];
+};
+
+export type RoleCostBreakdown = {
+  role_name: string;
+  percentage: number;
+  monthly_rate_inr: number;
+  effort_months: number;
+  cost_inr: number;
+};
+
+export type PhaseBreakdown = {
+  phase_name: string;
+  percentage: number;
+  effort_months: number;
+  cost_inr: number;
+};
+
+export type RiskFactor = {
+  risk_name: string;
+  impact_level: "High" | "Medium" | "Low";
+  probability: "High" | "Medium" | "Low";
+  mitigation: string;
+  potential_cost_impact_inr: number;
+};
+
+export type ExplainabilityStep = {
+  step_name: string;
+  effort_change_months: number;
+  is_base: boolean;
+  description: string;
+};
+
 export type ModelPredictions = {
   random_forest: number;
   xgboost: number;
@@ -88,6 +130,10 @@ export type FinalPredictionResponse = {
   warnings: string[];
   model_predictions: ModelPredictions | null;
   cost_range: CostRange | null;
+  role_breakdown: RoleCostBreakdown[] | null;
+  phase_breakdown: PhaseBreakdown[] | null;
+  risk_assessment: RiskFactor[] | null;
+  explainability_waterfall: ExplainabilityStep[] | null;
 };
 
 export type FollowUpInputType = "integer" | "number" | "select" | "text" | "boolean";
@@ -304,6 +350,8 @@ export type DirectEstimatePayload = {
   follow_up_answers: Record<string, string | number | boolean>;
   target_currency?: string;
   monthly_rate_inr?: number;
+  team_composition?: TeamComposition;
+  tech_stack?: TechStack;
 };
 
 export async function submitDirectEstimate(

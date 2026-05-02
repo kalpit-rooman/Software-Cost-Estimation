@@ -1,9 +1,10 @@
 "use client";
 
-import { Clock, CurrencyInr, Database, Shield, Users, Wrench } from "@phosphor-icons/react";
+import { AppWindow, Clock, CurrencyInr, Database, Shield, Users, Wrench } from "@phosphor-icons/react";
 
 import SelectInput from "@/components/estimation/SelectInput";
 import SliderInput from "@/components/estimation/SliderInput";
+import TeamComposition from "@/components/estimation/TeamComposition";
 import type { AdvancedInputs } from "@/components/estimation/types";
 
 type Step3AdvancedInputsProps = {
@@ -80,6 +81,21 @@ export default function Step3AdvancedInputs({
                 ]}
                 icon={Wrench}
               />
+              <SelectInput
+                label="Technology Stack"
+                helperText="Primary technology stack to be used."
+                value={values.techStack}
+                onChange={(techStack) => onChange({ ...values, techStack: techStack as AdvancedInputs["techStack"] })}
+                options={[
+                  { value: "web", label: "Web Application" },
+                  { value: "mobile_cross", label: "Mobile (Cross-platform)" },
+                  { value: "mobile_native", label: "Mobile (Native)" },
+                  { value: "enterprise", label: "Enterprise System" },
+                  { value: "ai_ml", label: "AI / ML Heavy" },
+                  { value: "embedded", label: "Embedded / IoT" },
+                ]}
+                icon={AppWindow}
+              />
             </div>
           </section>
 
@@ -114,21 +130,37 @@ export default function Step3AdvancedInputs({
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">Budget</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">Budget</h3>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={values.useTeamComposition}
+                  onChange={(e) => onChange({ ...values, useTeamComposition: e.target.checked })}
+                  className="rounded border-line/60 text-primary focus:ring-primary/20 h-4 w-4"
+                />
+                <span className="text-xs text-muted">Use role-based breakdown</span>
+              </label>
+            </div>
+            
             <div className="space-y-3">
-              <SliderInput
-                label="Monthly Salary per Developer"
-                helperText="Blended monthly CTC including benefits and overhead."
-                min={30000}
-                max={500000}
-                step={10000}
-                value={values.monthlySalary}
-                onChange={(monthlySalary) => onChange({ ...values, monthlySalary })}
-                icon={CurrencyInr}
-                formatValue={(v) =>
-                  `₹${new Intl.NumberFormat("en-IN").format(v)}/mo`
-                }
-              />
+              {values.useTeamComposition ? (
+                <TeamComposition values={values} onChange={onChange} />
+              ) : (
+                <SliderInput
+                  label="Monthly Salary per Developer"
+                  helperText="Blended monthly CTC including benefits and overhead."
+                  min={30000}
+                  max={500000}
+                  step={10000}
+                  value={values.monthlySalary}
+                  onChange={(monthlySalary) => onChange({ ...values, monthlySalary })}
+                  icon={CurrencyInr}
+                  formatValue={(v) =>
+                    `₹${new Intl.NumberFormat("en-IN").format(v)}/mo`
+                  }
+                />
+              )}
             </div>
           </section>
         </div>
