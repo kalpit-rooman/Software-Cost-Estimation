@@ -32,11 +32,13 @@ export default function ChatPanel({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const questions = suggestedQuestions ?? DEFAULT_SUGGESTED_QUESTIONS;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [history, loading]);
 
   async function sendMessage(msg: string): Promise<void> {
@@ -81,7 +83,7 @@ export default function ChatPanel({
   return (
     <div className="flex flex-col">
       {/* Message list */}
-      <div className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto px-6 py-5 sm:px-8">
+      <div ref={scrollRef} className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto px-6 py-5 sm:px-8">
         {history.map((msg, i) => (
           <div
             key={i}
@@ -126,8 +128,6 @@ export default function ChatPanel({
             {error}
           </div>
         )}
-
-        <div ref={bottomRef} />
       </div>
 
       {/* Suggested questions */}

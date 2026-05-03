@@ -560,7 +560,10 @@ export default function ResultsPage() {
 
       // All steps done — final pause then reveal results
       await new Promise<void>((r) => setTimeout(r, FINAL_PAUSE_MS));
-      if (!cancelled) setPhase("results");
+      if (!cancelled) {
+        setPhase("results");
+        window.scrollTo(0, 0);
+      }
     }
 
     runSteps();
@@ -745,7 +748,7 @@ export default function ResultsPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm"
+                className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 shadow-sm"
               >
                 <Printer size={16} />
                 Export PDF
