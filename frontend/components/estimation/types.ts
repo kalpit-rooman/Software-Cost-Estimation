@@ -26,6 +26,7 @@ export type AdvancedInputs = {
   timeConstraint: TimeConstraintOption;
   toolingMaturity: ToolingMaturityOption;
   techStack: import("@/lib/api").TechStack;
+  includeCostAnalysis: boolean;
   monthlySalary: number;
   useTeamComposition: boolean;
   teamRoles: { id: string; role_name: string; percentage: number; monthly_rate_inr: number }[];

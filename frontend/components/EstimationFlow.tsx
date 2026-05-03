@@ -51,6 +51,7 @@ const INITIAL_ADVANCED: AdvancedInputs = {
   timeConstraint: "moderate",
   toolingMaturity: "stable",
   techStack: "web",
+  includeCostAnalysis: true,
   monthlySalary: 150000,
   useTeamComposition: false,
   teamRoles: [
@@ -179,8 +180,9 @@ function buildPayload(
     dataset,
     target_currency: "INR",
     tech_stack: advanced.techStack,
-    monthly_rate_inr: advanced.monthlySalary,
-    team_composition: advanced.useTeamComposition ? { roles: advanced.teamRoles } : undefined,
+    include_cost_analysis: advanced.includeCostAnalysis,
+    monthly_rate_inr: advanced.includeCostAnalysis ? advanced.monthlySalary : undefined,
+    team_composition: advanced.includeCostAnalysis && advanced.useTeamComposition ? { roles: advanced.teamRoles } : undefined,
     project_brief: {
       num_screens: clampNumber(Math.round(core.projectSize * 0.65), 1, 10000),
       num_entities: clampNumber(Math.round(core.projectSize * 0.48), 1, 10000),

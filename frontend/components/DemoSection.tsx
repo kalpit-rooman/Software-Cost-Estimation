@@ -297,7 +297,7 @@ export default function DemoSection() {
     );
   }
 
-  const displayCurrency = result?.cost_breakdown.target_currency ?? briefForm.targetCurrency;
+  const displayCurrency = result?.cost_breakdown?.target_currency ?? briefForm.targetCurrency;
   const panelTitle = step === "brief" ? "Stage 1" : step === "followup" ? "Stage 2" : "Result";
   const panelSubtitle =
     step === "brief"
@@ -310,7 +310,7 @@ export default function DemoSection() {
     `Mode: ${result?.estimated_effort.prediction_mode ?? "pending"}`,
     result ? `Effort: ${result.estimated_effort.effort_months.toFixed(2)} person-months` : "Effort: awaiting final submission",
     result
-      ? `Display cost: ${formatMoney(result.cost_breakdown.display_cost, displayCurrency)}`
+      ? `Display cost: ${formatMoney(result.cost_breakdown?.display_cost ?? 0, displayCurrency)}`
       : "Display cost: awaiting final submission",
   ];
 
@@ -608,18 +608,24 @@ export default function DemoSection() {
 
                   <div className="border border-line bg-background/90 px-5 py-5">
                     <p className="text-xs uppercase tracking-[0.2em] text-muted">Cost breakdown</p>
-                    <p className="mt-3 text-sm leading-7 text-muted">
-                      Display cost: {formatMoney(result.cost_breakdown.display_cost, displayCurrency)}
-                    </p>
-                    <p className="text-sm leading-7 text-muted">
-                      Base INR: {formatMoney(result.cost_breakdown.base_cost_inr, "INR")}
-                    </p>
-                    <p className="text-sm leading-7 text-muted">
-                      Monthly INR rate: {formatMoney(result.cost_breakdown.monthly_rate_inr, "INR")}
-                    </p>
-                    <p className="text-sm leading-7 text-muted">
-                      Exchange rate: {result.cost_breakdown.exchange_rate.toFixed(4)}
-                    </p>
+                    {result.cost_breakdown ? (
+                      <>
+                        <p className="mt-3 text-sm leading-7 text-muted">
+                          Display cost: {formatMoney(result.cost_breakdown.display_cost, displayCurrency)}
+                        </p>
+                        <p className="text-sm leading-7 text-muted">
+                          Base INR: {formatMoney(result.cost_breakdown.base_cost_inr, "INR")}
+                        </p>
+                        <p className="text-sm leading-7 text-muted">
+                          Monthly INR rate: {formatMoney(result.cost_breakdown.monthly_rate_inr, "INR")}
+                        </p>
+                        <p className="text-sm leading-7 text-muted">
+                          Exchange rate: {result.cost_breakdown.exchange_rate.toFixed(4)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-3 text-sm leading-7 text-muted">No cost analysis included.</p>
+                    )}
                   </div>
 
                   <div className="space-y-3">

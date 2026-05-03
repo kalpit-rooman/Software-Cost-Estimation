@@ -86,7 +86,7 @@ export type PhaseBreakdown = {
   phase_name: string;
   percentage: number;
   effort_months: number;
-  cost_inr: number;
+  cost_inr: number | null;
 };
 
 export type RiskFactor = {
@@ -94,7 +94,7 @@ export type RiskFactor = {
   impact_level: "High" | "Medium" | "Low";
   probability: "High" | "Medium" | "Low";
   mitigation: string;
-  potential_cost_impact_inr: number;
+  potential_cost_impact_inr: number | null;
 };
 
 export type ExplainabilityStep = {
@@ -124,7 +124,7 @@ export type CostRange = {
 export type FinalPredictionResponse = {
   intake_id: string;
   estimated_effort: EstimatedEffort;
-  cost_breakdown: CostBreakdown;
+  cost_breakdown: CostBreakdown | null;
   prediction_confidence: number;
   assumptions: string[];
   warnings: string[];
@@ -352,6 +352,7 @@ export type DirectEstimatePayload = {
   monthly_rate_inr?: number;
   team_composition?: TeamComposition;
   tech_stack?: TechStack;
+  include_cost_analysis?: boolean;
 };
 
 export async function submitDirectEstimate(
@@ -407,4 +408,4 @@ export async function sendChatMessage(
   });
   return parseResponse<ChatResponse>(response);
 }
-
+

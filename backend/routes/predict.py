@@ -81,32 +81,89 @@ def _build_prediction_response(
     phase_breakdown_data: list | None = None,
     risk_assessment_data: list | None = None,
     explainability_data: list | None = None,
+    include_cost_analysis: bool = True,
 ) -> FinalPredictionResponse:
     """Build the complete FinalPredictionResponse with cost derivation."""
-    if team_composition and team_composition.roles:
-        # Calculate blended rate based on role percentages
-        total_pct = sum(role.percentage for role in team_composition.roles)
-        if total_pct <= 0:
-            monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+
+    if include_cost_analysis:
+        if team_composition and team_composition.roles:
+            # Calculate blended rate based on role percentages
+            total_pct = sum(role.percentage for role in team_composition.roles)
+            if total_pct <= 0:
+                monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+            else:
+                monthly_rate_inr = sum(
+                    (role.percentage / total_pct) * role.monthly_rate_inr
+                    for role in team_composition.roles
+                )
         else:
-            monthly_rate_inr = sum(
-                (role.percentage / total_pct) * role.monthly_rate_inr
-                for role in team_composition.roles
+            monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+
+        base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
+        try:
+            display_cost, exchange_rate = convert_from_inr(base_cost_inr, target_currency)
+        except ValueError:
+            # Unsupported currency – fall back to INR.
+            target_currency = "INR"
+            display_cost = base_cost_inr
+            exchange_rate = 1.0
+            warnings.append(
+                f"Requested currency '{original_currency}' is not supported. Showing INR."
+            )
+
+        cost_breakdown = CostBreakdown(
+            effort_months=round(effort_months, 2),
+            monthly_rate_inr=round(monthly_rate_inr, 2),
+            base_cost_inr=base_cost_inr,
+            target_currency=target_currency,
+            display_cost=display_cost,
+            exchange_rate=exchange_rate,
+        )
+
+        role_breakdown = None
+        if team_composition and team_composition.roles:
+            total_pct = sum(role.percentage for role in team_composition.roles) or 100.0
+            role_breakdown = []
+            for role in team_composition.roles:
+                pct = role.percentage / total_pct
+                r_effort = effort_months * pct
+                r_cost = r_effort * role.monthly_rate_inr
+                role_breakdown.append(
+                    RoleCostBreakdown(
+                        role_name=role.role_name,
+                        percentage=round(pct * 100, 2),
+                        monthly_rate_inr=role.monthly_rate_inr,
+                        effort_months=round(r_effort, 2),
+                        cost_inr=round(r_cost, 2),
+                    )
+                )
+
+        # Build model predictions and cost range if available (model mode only).
+        cost_range_obj = None
+        if cost_range_data:
+            cost_range_obj = CostRange(
+                optimistic_cost_inr=round(cost_range_data["optimistic_effort"] * monthly_rate_inr, 2),
+                most_likely_cost_inr=round(cost_range_data["most_likely_effort"] * monthly_rate_inr, 2),
+                pessimistic_cost_inr=round(cost_range_data["pessimistic_effort"] * monthly_rate_inr, 2),
+                optimistic_effort=cost_range_data["optimistic_effort"],
+                most_likely_effort=cost_range_data["most_likely_effort"],
+                pessimistic_effort=cost_range_data["pessimistic_effort"],
             )
     else:
-        monthly_rate_inr = monthly_rate_inr_override or get_state().monthly_rate_inr
+        # Cost analysis disabled – strip all money fields from the response.
+        cost_breakdown = None
+        role_breakdown = None
+        cost_range_obj = None
+        if phase_breakdown_data:
+            for phase in phase_breakdown_data:
+                phase.cost_inr = None
+        if risk_assessment_data:
+            for risk in risk_assessment_data:
+                risk.potential_cost_impact_inr = None
 
-    base_cost_inr = effort_to_inr(effort_months, monthly_rate_inr)
-    try:
-        display_cost, exchange_rate = convert_from_inr(base_cost_inr, target_currency)
-    except ValueError:
-        # Unsupported currency – fall back to INR.
-        target_currency = "INR"
-        display_cost = base_cost_inr
-        exchange_rate = 1.0
-        warnings.append(
-            f"Requested currency '{original_currency}' is not supported. Showing INR."
-        )
+    model_predictions_obj = None
+    if model_predictions_data:
+        model_predictions_obj = ModelPredictions(**model_predictions_data)
 
     estimated_effort = EstimatedEffort(
         effort_months=round(effort_months, 2),
@@ -115,47 +172,6 @@ def _build_prediction_response(
         warnings=warnings,
         prediction_mode=prediction_mode,
     )
-    cost_breakdown = CostBreakdown(
-        effort_months=round(effort_months, 2),
-        monthly_rate_inr=round(monthly_rate_inr, 2),
-        base_cost_inr=base_cost_inr,
-        target_currency=target_currency,
-        display_cost=display_cost,
-        exchange_rate=exchange_rate,
-    )
-
-    role_breakdown = None
-    if team_composition and team_composition.roles:
-        total_pct = sum(role.percentage for role in team_composition.roles) or 100.0
-        role_breakdown = []
-        for role in team_composition.roles:
-            pct = role.percentage / total_pct
-            r_effort = effort_months * pct
-            r_cost = r_effort * role.monthly_rate_inr
-            role_breakdown.append(
-                RoleCostBreakdown(
-                    role_name=role.role_name,
-                    percentage=round(pct * 100, 2),
-                    monthly_rate_inr=role.monthly_rate_inr,
-                    effort_months=round(r_effort, 2),
-                    cost_inr=round(r_cost, 2),
-                )
-            )
-
-    # Build model predictions and cost range if available (model mode only).
-    model_predictions_obj = None
-    cost_range_obj = None
-    if model_predictions_data:
-        model_predictions_obj = ModelPredictions(**model_predictions_data)
-    if cost_range_data:
-        cost_range_obj = CostRange(
-            optimistic_cost_inr=round(cost_range_data["optimistic_effort"] * monthly_rate_inr, 2),
-            most_likely_cost_inr=round(cost_range_data["most_likely_effort"] * monthly_rate_inr, 2),
-            pessimistic_cost_inr=round(cost_range_data["pessimistic_effort"] * monthly_rate_inr, 2),
-            optimistic_effort=cost_range_data["optimistic_effort"],
-            most_likely_effort=cost_range_data["most_likely_effort"],
-            pessimistic_effort=cost_range_data["pessimistic_effort"],
-        )
 
     return FinalPredictionResponse(
         intake_id=intake_id,
@@ -372,14 +388,14 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
     phase_breakdown = distribute_phases(
         effort_months=final_effort_months,
         monthly_rate_inr=blended_rate,
-        complexity=original_payload.project_brief.complexity,
-        reliability=original_payload.project_brief.reliability,
+        complexity=normalized_payload.project_brief.complexity,
+        reliability=normalized_payload.project_brief.reliability,
     )
 
     # Risk Assessment
     risks = assess_risks(
-        complexity=original_payload.project_brief.complexity,
-        reliability=original_payload.project_brief.reliability,
+        complexity=normalized_payload.project_brief.complexity,
+        reliability=normalized_payload.project_brief.reliability,
         base_effort=final_effort_months,
         monthly_rate_inr=blended_rate,
     )
@@ -407,6 +423,7 @@ def predict_final(payload: FinalPredictionRequest) -> FinalPredictionResponse:
         phase_breakdown_data=phase_breakdown,
         risk_assessment_data=risks,
         explainability_data=waterfall,
+        include_cost_analysis=payload.include_cost_analysis,
     )
 
 
@@ -531,6 +548,7 @@ def predict_direct(payload: DirectEstimateRequest) -> FinalPredictionResponse:
         phase_breakdown_data=phase_breakdown,
         risk_assessment_data=risks,
         explainability_data=waterfall,
+        include_cost_analysis=payload.include_cost_analysis,
     )
 
 

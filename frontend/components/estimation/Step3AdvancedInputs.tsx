@@ -132,36 +132,55 @@ export default function Step3AdvancedInputs({
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">Budget</h3>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={values.useTeamComposition}
-                  onChange={(e) => onChange({ ...values, useTeamComposition: e.target.checked })}
-                  className="rounded border-line/60 text-primary focus:ring-primary/20 h-4 w-4"
-                />
-                <span className="text-xs text-muted">Use role-based breakdown</span>
-              </label>
             </div>
-            
-            <div className="space-y-3">
-              {values.useTeamComposition ? (
-                <TeamComposition values={values} onChange={onChange} />
-              ) : (
-                <SliderInput
-                  label="Monthly Salary per Developer"
-                  helperText="Blended monthly CTC including benefits and overhead."
-                  min={30000}
-                  max={500000}
-                  step={10000}
-                  value={values.monthlySalary}
-                  onChange={(monthlySalary) => onChange({ ...values, monthlySalary })}
-                  icon={CurrencyInr}
-                  formatValue={(v) =>
-                    `₹${new Intl.NumberFormat("en-IN").format(v)}/mo`
-                  }
-                />
-              )}
-            </div>
+
+            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-line/60 bg-background px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Include cost analysis</p>
+                <p className="text-xs text-muted">Show estimated project cost alongside effort.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={values.includeCostAnalysis}
+                onChange={(e) => onChange({ ...values, includeCostAnalysis: e.target.checked })}
+                className="h-5 w-5 rounded border-line/60 text-primary focus:ring-primary/20"
+              />
+            </label>
+
+            {values.includeCostAnalysis && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted">Configure team rates</p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={values.useTeamComposition}
+                      onChange={(e) => onChange({ ...values, useTeamComposition: e.target.checked })}
+                      className="rounded border-line/60 text-primary focus:ring-primary/20 h-4 w-4"
+                    />
+                    <span className="text-xs text-muted">Use role-based breakdown</span>
+                  </label>
+                </div>
+
+                {values.useTeamComposition ? (
+                  <TeamComposition values={values} onChange={onChange} />
+                ) : (
+                  <SliderInput
+                    label="Monthly Salary per Developer"
+                    helperText="Blended monthly CTC including benefits and overhead."
+                    min={30000}
+                    max={500000}
+                    step={10000}
+                    value={values.monthlySalary}
+                    onChange={(monthlySalary) => onChange({ ...values, monthlySalary })}
+                    icon={CurrencyInr}
+                    formatValue={(v) =>
+                      `₹${new Intl.NumberFormat("en-IN").format(v)}/mo`
+                    }
+                  />
+                )}
+              </div>
+            )}
           </section>
         </div>
       )}

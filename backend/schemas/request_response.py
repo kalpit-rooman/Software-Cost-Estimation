@@ -254,7 +254,7 @@ class PhaseBreakdown(BaseModel):
     phase_name: str
     percentage: float
     effort_months: float
-    cost_inr: float
+    cost_inr: float | None = None
 
 
 class RiskFactor(BaseModel):
@@ -262,7 +262,7 @@ class RiskFactor(BaseModel):
     impact_level: str  # "High", "Medium", "Low"
     probability: str   # "High", "Medium", "Low"
     mitigation: str
-    potential_cost_impact_inr: float
+    potential_cost_impact_inr: float | None = None
 
 
 class ExplainabilityStep(BaseModel):
@@ -298,7 +298,7 @@ class FinalPredictionResponse(BaseModel):
 
     intake_id: str
     estimated_effort: EstimatedEffort
-    cost_breakdown: CostBreakdown
+    cost_breakdown: CostBreakdown | None = None
     prediction_confidence: float = Field(..., ge=0.0, le=1.0)
     assumptions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
@@ -350,6 +350,7 @@ class FinalPredictionRequest(BaseModel):
     monthly_rate_inr: float | None = Field(default=None, ge=10000, le=5000000)
     team_composition: TeamComposition | None = None
     tech_stack: TechStack = Field(default=TechStack.web)
+    include_cost_analysis: bool = True
 
     @field_validator("target_currency", mode="before")
     @classmethod
@@ -398,6 +399,7 @@ class DirectEstimateRequest(BaseModel):
     monthly_rate_inr: float | None = Field(default=None, ge=10000, le=5000000)
     team_composition: TeamComposition | None = None
     tech_stack: TechStack = Field(default=TechStack.web)
+    include_cost_analysis: bool = True
 
     @field_validator("target_currency", mode="before")
     @classmethod

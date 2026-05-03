@@ -147,8 +147,9 @@ function ModelComparisonCard({
   monthlyRate,
 }: {
   predictions: ModelPredictions;
-  monthlyRate: number;
+  monthlyRate: number | null;
 }) {
+  const showCost = monthlyRate !== null && monthlyRate > 0;
   const models = [
     { key: "random_forest", label: "Random Forest", effort: predictions.random_forest },
     { key: "xgboost", label: "XGBoost", effort: predictions.xgboost },
@@ -180,9 +181,11 @@ function ModelComparisonCard({
               <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
                 Effort (PM)
               </th>
+              {showCost && (
               <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
                 Cost (INR)
               </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -217,9 +220,11 @@ function ModelComparisonCard({
                   <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
                     {model.effort.toFixed(1)}
                   </td>
+                  {showCost && (
                   <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
-                    {formatINR(model.effort * monthlyRate)}
+                    {formatINR(model.effort * (monthlyRate ?? 0))}
                   </td>
+                  )}
                 </tr>
               );
             })}
@@ -301,6 +306,7 @@ function RoleBreakdownCard({
 
 function PhaseBreakdownCard({ phases }: { phases: PhaseBreakdown[] }) {
   const colors = ["bg-emerald-400", "bg-blue-400", "bg-indigo-400", "bg-violet-400", "bg-pink-400", "bg-rose-400"];
+  const showCost = phases.length > 0 && phases[0].cost_inr !== null;
 
   return (
     <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
@@ -341,9 +347,11 @@ function PhaseBreakdownCard({ phases }: { phases: PhaseBreakdown[] }) {
               <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted hidden sm:table-cell">
                 %
               </th>
+              {showCost && (
               <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
                 Cost
               </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -359,9 +367,11 @@ function PhaseBreakdownCard({ phases }: { phases: PhaseBreakdown[] }) {
                 <td className="px-4 py-2.5 text-right text-muted tabular-nums hidden sm:table-cell">
                   {phase.percentage}%
                 </td>
+                {showCost && (
                 <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
-                  {formatINR(phase.cost_inr)}
+                  {formatINR(phase.cost_inr ?? 0)}
                 </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -402,12 +412,14 @@ function RiskAssessmentCard({ risks }: { risks: RiskFactor[] }) {
             <p className="text-xs text-muted mb-3 line-clamp-2" title={risk.mitigation}>
               <span className="font-semibold">Mitigation:</span> {risk.mitigation}
             </p>
+            {risk.potential_cost_impact_inr !== null && (
             <div className="flex items-center justify-between mt-auto border-t border-line/30 pt-2">
               <span className="text-[10px] text-muted uppercase tracking-widest">Potential Cost</span>
               <span className="text-sm font-bold text-foreground tabular-nums">
                 + {formatINR(risk.potential_cost_impact_inr)}
               </span>
             </div>
+            )}
           </div>
         ))}
       </div>
@@ -565,11 +577,11 @@ export default function ResultsPage() {
           effort_months: stored.result.estimated_effort.effort_months,
           confidence: stored.result.prediction_confidence,
           prediction_mode: stored.result.estimated_effort.prediction_mode,
-          display_cost: stored.result.cost_breakdown.display_cost,
-          target_currency: stored.result.cost_breakdown.target_currency,
-          base_cost_inr: stored.result.cost_breakdown.base_cost_inr,
-          monthly_rate_inr: stored.result.cost_breakdown.monthly_rate_inr,
-          exchange_rate: stored.result.cost_breakdown.exchange_rate,
+          display_cost: stored.result.cost_breakdown?.display_cost ?? 0,
+          target_currency: stored.result.cost_breakdown?.target_currency ?? "INR",
+          base_cost_inr: stored.result.cost_breakdown?.base_cost_inr ?? 0,
+          monthly_rate_inr: stored.result.cost_breakdown?.monthly_rate_inr ?? 0,
+          exchange_rate: stored.result.cost_breakdown?.exchange_rate ?? 1,
           assumptions: stored.result.assumptions,
           warnings: stored.result.warnings,
         }
@@ -643,11 +655,12 @@ export default function ResultsPage() {
 
   const { result } = stored;
   const effortMonths = result.estimated_effort.effort_months;
-  const costINR = result.cost_breakdown.base_cost_inr;
-  const displayCost = result.cost_breakdown.display_cost;
-  const targetCurrency = result.cost_breakdown.target_currency;
+  const hasCostAnalysis = result.cost_breakdown !== null;
+  const costINR = result.cost_breakdown?.base_cost_inr ?? 0;
+  const displayCost = result.cost_breakdown?.display_cost ?? 0;
+  const targetCurrency = result.cost_breakdown?.target_currency ?? "INR";
   const confidence = Math.round(result.prediction_confidence * 100);
-  const monthlyRate = result.cost_breakdown.monthly_rate_inr;
+  const monthlyRate = result.cost_breakdown?.monthly_rate_inr ?? 0;
   const costToShow = targetCurrency === "INR" ? costINR : displayCost;
 
   const { duration, teamCard, raw } = humanizeEffort(effortMonths);
@@ -791,6 +804,7 @@ export default function ResultsPage() {
         </div>
 
         {/* Cost card */}
+        {hasCostAnalysis && (
         <div className="animate-fade-in rounded-2xl border border-line/60 bg-card p-6 shadow-sm">
           <div className="flex items-start gap-4">
             <span className="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
@@ -851,6 +865,7 @@ export default function ResultsPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Cost Range Visualization */}
         {result.cost_range && (
@@ -881,7 +896,7 @@ export default function ResultsPage() {
         {result.model_predictions && (
           <ModelComparisonCard
             predictions={result.model_predictions}
-            monthlyRate={monthlyRate}
+            monthlyRate={hasCostAnalysis ? monthlyRate : null}
           />
         )}
 
@@ -916,7 +931,7 @@ export default function ResultsPage() {
                     </td>
                     <td className="px-4 py-3 text-right text-muted tabular-nums">Now</td>
                     <td className="px-4 py-3 text-right text-foreground tabular-nums">{result.estimated_effort.effort_months.toFixed(1)} PM</td>
-                    <td className="px-4 py-3 text-right text-foreground tabular-nums">{formatINR(result.cost_breakdown.base_cost_inr)}</td>
+                    <td className="px-4 py-3 text-right text-foreground tabular-nums">{result.cost_breakdown ? formatINR(result.cost_breakdown.base_cost_inr) : "—"}</td>
                   </tr>
                   
                   {/* Saved */}
@@ -930,7 +945,7 @@ export default function ResultsPage() {
                         {sc.result.estimated_effort.effort_months.toFixed(1)} PM
                       </td>
                       <td className="px-4 py-3 text-right text-foreground tabular-nums">
-                        {formatINR(sc.result.cost_breakdown.base_cost_inr)}
+                        {sc.result.cost_breakdown ? formatINR(sc.result.cost_breakdown.base_cost_inr) : "—"}
                       </td>
                     </tr>
                   ))}
