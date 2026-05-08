@@ -1,6 +1,6 @@
 # Project Log
 
-Last updated: 2026-04-25
+Last updated: 2026-05-03
 
 ## Project Summary
 
@@ -198,6 +198,14 @@ Source: `results/metrics/cnn_vs_pso_metrics.csv` plus the 2026-04-25 delta check
 - Added a recursive fallback search for the `Software-cost-Estimation` project folder in Drive so the notebooks no longer depend on `Path.cwd()` matching the repository root.
 - Added a Colab-only `pyswarms` install step in `notebooks/05_pso.ipynb` before importing `src.pso_optimizer`, preventing the PSO notebook from failing on a fresh Colab runtime.
 - Left `notebooks/01_eda.ipynb` unchanged in this pass because its Colab-specific setup had already been handled separately.
+
+### 2026-05-03 - Frontend enhancement roadmap and planning documents created
+
+- Created `PHASE0_CONTRACT_FREEZE.md` documenting the public API contract (request/response schemas) and internal concepts. Defines what remains public vs. internal-only terminology before major frontend/backend rewrites.
+- Created `improvement_analysis.md` (full-stack audit) analyzing current architecture strengths and gaps. Identified the fixed ₹1,50,000 salary blending as the main usability weakness. Recommends 13 specific improvements organized into 3 tiers: quick wins (dynamic salary input, cost range display, model transparency), medium-effort enhancements (phase-based estimation, tech-stack multiplier, role-based costing, PDF export), and stretch goals (risk analysis, what-if scenarios, stacking ensemble, SHAP explainability).
+- Created `implementation_plan.md` (5-phase roadmap) detailing all frontend and backend changes required across Phases 1–5: dynamic salary + confidence band (Phase 1), role-based breakdown + transparency (Phase 2), phase distribution + tech-stack multiplier (Phase 3), SHAP + risk analysis (Phase 4), PDF export + what-if comparison (Phase 5). Included detailed task breakdown, schema additions, dependency graph, and estimated effort per phase (~8–10 working sessions total).
+- Created `test_plan.md` (manual testing guide) with 4 comprehensive test scenarios covering salary input, team composition, tech-stack adjustment, cost range, model comparison, phase breakdown, PDF export, and scenario comparison.
+- **Status**: Planning phase completed; implementation not yet started. These documents freeze the product contract and provide an executable roadmap for the upcoming frontend modernization effort.
 - Validation: reran the updated first code cell in each touched notebook locally; all four executed successfully and resolved `c:\Users\kalpi\OneDrive\Desktop\Software-cost-Estimation` as the project root, with downstream dataset loading succeeding in notebooks 3 to 5.
 
 ### 2026-04-25 - CNN+PSO status review from saved artifacts

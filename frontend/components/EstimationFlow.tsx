@@ -218,10 +218,12 @@ export default function EstimationFlow() {
   function nextStep(): void {
     if (step === 1 && !projectTypeId) return;
     setStep((current) => (current < 3 ? ((current + 1) as FlowStep) : current));
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function prevStep(): void {
     setStep((current) => (current > 1 ? ((current - 1) as FlowStep) : current));
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   async function estimateCost(): Promise<void> {
@@ -295,27 +297,13 @@ export default function EstimationFlow() {
                 onChange={setAdvancedInputs}
               />
 
-              <section className="rounded-2xl border border-line/60 bg-card p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-foreground">Step 4: Prediction</h3>
-                <p className="mt-1 text-sm text-muted">Ready when you are. We will convert your answers into model inputs and run the estimation.</p>
-
-                <button
-                  type="button"
-                  onClick={estimateCost}
-                  disabled={isEstimating || !selectedProjectType}
-                  className="btn-primary mt-4 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isEstimating ? "Estimating…" : "Get Estimate →"}
-                </button>
-
-                {error && (
-                  <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-                )}
-              </section>
             </div>
           )}
         </div>
 
+        {error && (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        )}
         <footer className="flex items-center justify-between gap-3">
           <button
             type="button"
@@ -325,14 +313,25 @@ export default function EstimationFlow() {
           >
             Back
           </button>
-          <button
-            type="button"
-            onClick={nextStep}
-            disabled={(step === 1 && !projectTypeId) || step === 3}
-            className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Next
-          </button>
+          {step < 3 ? (
+            <button
+              type="button"
+              onClick={nextStep}
+              disabled={step === 1 && !projectTypeId}
+              className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={estimateCost}
+              disabled={isEstimating || !selectedProjectType}
+              className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isEstimating ? "Estimating…" : "Get Estimate →"}
+            </button>
+          )}
         </footer>
       </div>
     </section>

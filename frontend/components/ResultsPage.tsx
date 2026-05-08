@@ -190,32 +190,17 @@ function ModelComparisonCard({
           </thead>
           <tbody>
             {models.map((model) => {
-              const isBest = model.key === predictions.best_model.toLowerCase().replace(/\s+/g, "_")
-                || (model.key === "random_forest" && predictions.best_model === "RandomForest")
-                || (model.key === "xgboost" && predictions.best_model === "XGBoost")
-                || (model.key === "linear_regression" && predictions.best_model === "LinearRegression");
               const isEnsemble = model.key === "ensemble";
 
               return (
                 <tr
                   key={model.key}
                   className={`border-b border-line/30 last:border-b-0 ${
-                    isEnsemble
-                      ? "bg-primary/5 font-semibold"
-                      : isBest
-                        ? "bg-emerald-50/50"
-                        : ""
+                    isEnsemble ? "bg-primary/5 font-semibold" : ""
                   }`}
                 >
                   <td className="px-4 py-2.5 text-foreground">
-                    <span className="flex items-center gap-2">
-                      {model.label}
-                      {isBest && !isEnsemble && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                          Best
-                        </span>
-                      )}
-                    </span>
+                    {model.label}
                   </td>
                   <td className="px-4 py-2.5 text-right text-foreground tabular-nums">
                     {model.effort.toFixed(1)}
@@ -498,6 +483,7 @@ export default function ResultsPage() {
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
     const raw = sessionStorage.getItem("estimation_result");
     if (!raw) {
       router.replace("/estimate");

@@ -86,8 +86,11 @@ class ModelOrchestrator:
             effort_xgb = raw_xgb
             effort_lr = raw_lr
 
-        # Guard: EstimatedEffort schema caps at 600 person-months.
+        # Guard: clamp to a sensible positive range [0.1, 600] person-months.
+        _EFFORT_MIN = 0.1
         _EFFORT_CAP = 600.0
+        if effort_months < _EFFORT_MIN:
+            effort_months = _EFFORT_MIN
         capped = effort_months > _EFFORT_CAP
         if capped:
             effort_months = _EFFORT_CAP
@@ -103,6 +106,11 @@ class ModelOrchestrator:
             f"Internal estimation route: {route}.",
         ]
         warnings: list[str] = []
+        if raw_prediction <= 0:
+            warnings.append(
+                "The ML model returned a non-positive prediction for the given inputs. "
+                "The estimate has been floored to a minimum. Consider refining your inputs."
+            )
         if capped:
             warnings.append(
                 "Predicted effort exceeded the estimation ceiling (600 person-months). "
